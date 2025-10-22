@@ -1,0 +1,35 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme - Transport Company Executive Theme -->
+    <style name="Theme.ControlOperador" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+        <!-- Primary brand color - Dark blue-grey for professional look -->
+        <item name="colorPrimary">@color/primary_dark</item>
+        <item name="colorPrimaryVariant">@color/primary_medium</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <!-- Secondary brand color - Gold accent for transport company -->
+        <item name="colorSecondary">@color/accent_gold</item>
+        <item name="colorSecondaryVariant">@color/accent_gold_dark</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <!-- Status bar color -->
+        <item name="android:statusBarColor">@color/primary_dark</item>
+        <!-- Error color -->
+        <item name="colorError">@color/error_red</item>
+        <!-- Button style -->
+        <item name="materialButtonStyle">@style/Widget.ControlOperador.Button</item>
+    </style>
+
+    <style name="Theme.ControlOperador.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="Theme.ControlOperador.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+
+    <style name="Theme.ControlOperador.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+    
+    <!-- Custom Button Style - Gold accent for executive look -->
+    <style name="Widget.ControlOperador.Button" parent="Widget.MaterialComponents.Button">
+        <item name="backgroundTint">@color/accent_gold</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="rippleColor">@color/ripple</item>
+    </style>
+</resources>

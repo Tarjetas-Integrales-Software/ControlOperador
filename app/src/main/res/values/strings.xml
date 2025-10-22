@@ -1,0 +1,92 @@
+<resources>
+    <!-- App Info -->
+    <string name="app_name">Control Operador</string>
+    <string name="app_subtitle">Sistema de Gestión de Transporte</string>
+    <string name="app_logo">Logo de la empresa</string>
+    
+    <!-- Navigation -->
+    <string name="navigation_drawer_open">Abrir menú de navegación</string>
+    <string name="navigation_drawer_close">Cerrar menú de navegación</string>
+    <string name="nav_header_title">Control Operador</string>
+    <string name="nav_header_subtitle">Operador: %1$s</string>
+    <string name="nav_header_desc">Encabezado de navegación</string>
+    
+    <!-- Menu Items -->
+    <string name="menu_home">Inicio</string>
+    <string name="menu_gallery">Unidades</string>
+    <string name="menu_slideshow">Reportes</string>
+    <string name="menu_chat">Mensajes</string>
+    <string name="menu_voice">Notas de Voz</string>
+    <string name="menu_logout">Cerrar Sesión</string>
+    <string name="action_settings">Configuración</string>
+    
+    <!-- Messages Section -->
+    <string name="messages_title">Mensajes</string>
+    <string name="messages_text">Mensajes de Texto</string>
+    <string name="messages_voice">Notas de Voz</string>
+    <string name="messages_unread">%1$d sin leer</string>
+    <string name="messages_unplayed">%1$d sin reproducir</string>
+    <string name="messages_view_all">Ver todos</string>
+    <string name="messages_no_messages">No hay mensajes</string>
+    <string name="messages_no_voice">No hay notas de voz</string>
+    <string name="messages_send">Enviar</string>
+    <string name="messages_select_response">Selecciona una respuesta</string>
+    <string name="messages_sent">Mensaje enviado</string>
+    
+    <!-- Predefined Responses -->
+    <string name="response_mechanical_failure">FALLA MECÁNICA</string>
+    <string name="response_flat_tire">NEUMÁTICO PONCHADO</string>
+    <string name="response_accident">SINIESTRO</string>
+    <string name="response_traffic_stopped">TRÁFICO DETENIDO</string>
+    <string name="response_detour">DESVIACIÓN</string>
+    <string name="response_prepaid_failure">FALLA EN EQUIPO DE PREPAGO</string>
+    
+    <!-- Predefined Responses with Emojis -->
+    <string name="response_falla_mecanica">🔧 FALLA MECÁNICA</string>
+    <string name="response_neumatico_ponchado">🛞 NEUMÁTICO PONCHADO</string>
+    <string name="response_siniestro">🚨 SINIESTRO</string>
+    <string name="response_trafico_detenido">🚧 TRÁFICO DETENIDO</string>
+    <string name="response_desviacion">🔀 DESVIACIÓN</string>
+    <string name="response_falla_prepago">💳 FALLA EN EQUIPO DE PREPAGO</string>
+    
+    <!-- Chat Screen -->
+    <string name="send_response">Enviar Respuesta</string>
+    <string name="select_predefined_response">Selecciona una Respuesta</string>
+    <string name="no_messages_yet">No hay mensajes todavía</string>
+    <string name="loading_messages">Cargando mensajes…</string>
+    
+    <!-- Voice Messages -->
+    <string name="voice_play">Reproducir</string>
+    <string name="voice_pause">Pausar</string>
+    <string name="voice_duration">%1$d:%2$02d</string>
+    <string name="voice_from">De: %1$s</string>
+    <string name="voice_transcription">Transcripción:</string>
+    
+    <!-- Time Formats -->
+    <string name="time_just_now">Ahora</string>
+    <string name="time_minutes_ago">Hace %1$d min</string>
+    <string name="time_hours_ago">Hace %1$d h</string>
+    <string name="time_days_ago">Hace %1$d días</string>
+    
+    <!-- Login Screen -->
+    <string name="login_title">Acceso de Operador</string>
+    <string name="login_subtitle">Ingrese su clave de identificación</string>
+    <string name="operator_code_hint">Clave de Operador</string>
+    <string name="operator_code_helper">5 dígitos numéricos</string>
+    <string name="login_button">Ingresar al Sistema</string>
+    <string name="login_footer">Control Operador v1.0 - Tarjetas Integrales</string>
+    
+    <!-- Login Validation Messages -->
+    <string name="error_empty_code">Por favor ingrese su clave de operador</string>
+    <string name="error_invalid_length">La clave debe tener exactamente 5 dígitos</string>
+    <string name="error_invalid_code">Clave de operador incorrecta</string>
+    <string name="error_not_numeric">La clave debe contener solo números</string>
+    <string name="login_success">Acceso autorizado. Bienvenido!</string>
+    
+    <!-- Session Messages -->
+    <string name="session_expired">Su sesión ha expirado. Por favor ingrese nuevamente.</string>
+    <string name="logout_confirm">¿Está seguro que desea cerrar sesión?</string>
+    <string name="logout_success">Sesión cerrada correctamente</string>
+    <string name="button_cancel">Cancelar</string>
+    <string name="button_confirm">Confirmar</string>
+</resources>

@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@android:color/white">
+
+    <!-- Título -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/select_predefined_response"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@color/primary_dark"
+        android:gravity="center"
+        android:paddingBottom="16dp" />
+
+    <!-- Respuesta 1: Falla mecánica -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/responseMecanica"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/response_falla_mecanica"
+        android:textAlignment="textStart"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:layout_marginBottom="8dp"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        app:cornerRadius="8dp" />
+
+    <!-- Respuesta 2: Neumático ponchado -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/responseNeumatico"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/response_neumatico_ponchado"
+        android:textAlignment="textStart"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:layout_marginBottom="8dp"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        app:cornerRadius="8dp" />
+
+    <!-- Respuesta 3: Siniestro -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/responseSiniestro"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/response_siniestro"
+        android:textAlignment="textStart"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:layout_marginBottom="8dp"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        app:cornerRadius="8dp" />
+
+    <!-- Respuesta 4: Tráfico detenido -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/responseTrafico"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/response_trafico_detenido"
+        android:textAlignment="textStart"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:layout_marginBottom="8dp"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        app:cornerRadius="8dp" />
+
+    <!-- Respuesta 5: Desviación -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/responseDesviacion"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/response_desviacion"
+        android:textAlignment="textStart"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:layout_marginBottom="8dp"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        app:cornerRadius="8dp" />
+
+    <!-- Respuesta 6: Falla en equipo de prepago -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/responsePrepago"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/response_falla_prepago"
+        android:textAlignment="textStart"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:layout_marginBottom="8dp"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        app:cornerRadius="8dp" />
+
+    <!-- Botón cancelar -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/cancelButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@android:string/cancel"
+        android:layout_marginTop="8dp"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        app:cornerRadius="8dp" />
+
+</LinearLayout>

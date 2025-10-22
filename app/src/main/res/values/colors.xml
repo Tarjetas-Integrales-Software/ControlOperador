@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Original Material Colors -->
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <!-- Transport Company Theme - Executive & Modern -->
+    <color name="primary_dark">#1A2332</color>        <!-- Dark blue-grey (professional) -->
+    <color name="primary_medium">#2C3E50</color>      <!-- Medium blue-grey -->
+    <color name="primary_light">#34495E</color>       <!-- Light blue-grey -->
+    <color name="accent_gold">#F39C12</color>         <!-- Gold/Orange accent -->
+    <color name="accent_gold_dark">#E67E22</color>    <!-- Darker gold -->
+    <color name="accent_blue">#3498DB</color>         <!-- Bright blue for actions -->
+    
+    <!-- Backgrounds -->
+    <color name="login_background">#ECF0F1</color>    <!-- Light grey background -->
+    <color name="card_background">#FFFFFF</color>     <!-- White cards -->
+    
+    <!-- Text Colors -->
+    <color name="text_primary">#2C3E50</color>        <!-- Dark text -->
+    <color name="text_secondary">#7F8C8D</color>      <!-- Grey text -->
+    <color name="text_hint">#BDC3C7</color>           <!-- Light grey hints -->
+    
+    <!-- Status Colors -->
+    <color name="success_green">#27AE60</color>       <!-- Success state -->
+    <color name="error_red">#E74C3C</color>           <!-- Error state -->
+    <color name="warning_orange">#E67E22</color>      <!-- Warning state -->
+    
+    <!-- Additional UI Elements -->
+    <color name="divider">#E0E0E0</color>             <!-- Dividers -->
+    <color name="ripple">#20000000</color>            <!-- Touch ripple effect -->
+</resources>

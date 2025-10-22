@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="4dp"
+    app:cardBackgroundColor="@android:color/white">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <!-- Icono de nota de voz -->
+        <ImageView
+            android:id="@+id/voiceIcon"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_voice"
+            android:tint="@color/accent_blue"
+            android:contentDescription="@string/messages_voice"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- Indicador de no reproducido -->
+        <View
+            android:id="@+id/unplayedIndicator"
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:background="@drawable/badge_background"
+            android:visibility="visible"
+            app:layout_constraintEnd_toEndOf="@id/voiceIcon"
+            app:layout_constraintTop_toTopOf="@id/voiceIcon" />
+
+        <!-- Duración -->
+        <TextView
+            android:id="@+id/voiceDuration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/primary_dark"
+            app:layout_constraintStart_toEndOf="@id/voiceIcon"
+            app:layout_constraintTop_toTopOf="@id/voiceIcon"
+            tools:text="0:45" />
+
+        <!-- Timestamp -->
+        <TextView
+            android:id="@+id/voiceTimestamp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary"
+            app:layout_constraintStart_toStartOf="@id/voiceDuration"
+            app:layout_constraintTop_toBottomOf="@id/voiceDuration"
+            tools:text="Hace 15 min" />
+
+        <!-- Botón Play/Pause -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/playButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_play"
+            app:fabSize="mini"
+            app:tint="@android:color/white"
+            app:backgroundTint="@color/accent_blue"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:contentDescription="@string/voice_play" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.google.android.material.card.MaterialCardView>

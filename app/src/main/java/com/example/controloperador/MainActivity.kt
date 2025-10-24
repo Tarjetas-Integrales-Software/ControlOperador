@@ -1,13 +1,16 @@
 package com.example.controloperador
 
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.WindowInsets
+import android.view.WindowInsetsController
+import android.view.WindowManager
 import android.widget.TextView
-import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.navigation.NavigationView
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
@@ -56,16 +59,14 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         
+        // Habilitar modo kiosko (pantalla completa inmersiva)
+        // IMPORTANTE: Debe llamarse DESPUÉS de setContentView()
+        enableKioskMode()
+        
         sessionManager = SessionManager(this)
 
         setSupportActionBar(binding.appBarMain.toolbar)
 
-        binding.appBarMain.fab.setOnClickListener { view ->
-            Snackbar.make(view, "Acción rápida de operador", Snackbar.LENGTH_LONG)
-                .setAction("OK", null)
-                .setAnchorView(R.id.fab).show()
-        }
-        
         val drawerLayout: DrawerLayout = binding.drawerLayout
         val navView: NavigationView = binding.navView
         val navController = findNavController(R.id.nav_host_fragment_content_main)
@@ -73,7 +74,7 @@ class MainActivity : AppCompatActivity() {
         // Configurar destinos de nivel superior
         appBarConfiguration = AppBarConfiguration(
             setOf(
-                R.id.nav_login, R.id.nav_home, R.id.nav_gallery, R.id.nav_slideshow
+                R.id.nav_login, R.id.nav_home, R.id.nav_slideshow
             ), drawerLayout
         )
         
@@ -87,13 +88,13 @@ class MainActivity : AppCompatActivity() {
                     // Ocultar drawer y toolbar en login
                     drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
                     supportActionBar?.hide()
-                    binding.appBarMain.fab.visibility = View.GONE
+                    binding.appBarMain.toolbarLogoutButton.visibility = View.GONE
                 }
                 else -> {
                     // Mostrar drawer y toolbar en otras pantallas
                     drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
                     supportActionBar?.show()
-                    binding.appBarMain.fab.visibility = View.VISIBLE
+                    binding.appBarMain.toolbarLogoutButton.visibility = View.VISIBLE
                     
                     // Actualizar header con código de operador
                     updateNavHeader()
@@ -106,6 +107,15 @@ class MainActivity : AppCompatActivity() {
         
         // Inicializar referencias a las vistas del header
         initializeHeaderViews()
+        
+        // Configurar botón de logout en el toolbar
+        setupToolbarLogoutButton()
+    }
+
+    private fun setupToolbarLogoutButton() {
+        binding.appBarMain.toolbarLogoutButton.setOnClickListener {
+            showLogoutDialog()
+        }
     }
 
     private fun initializeHeaderViews() {
@@ -114,6 +124,7 @@ class MainActivity : AppCompatActivity() {
         textViewRoute = headerView.findViewById(R.id.textViewRoute)
         textViewUnit = headerView.findViewById(R.id.textViewUnit)
         textViewDateTime = headerView.findViewById(R.id.textViewDateTime)
+
     }
 
     private fun updateNavHeader() {
@@ -175,12 +186,6 @@ class MainActivity : AppCompatActivity() {
         
         val navController = findNavController(R.id.nav_host_fragment_content_main)
         navController.navigate(R.id.nav_login)
-        
-        Snackbar.make(
-            binding.root,
-            getString(R.string.logout_success),
-            Snackbar.LENGTH_SHORT
-        ).show()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -191,7 +196,7 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_settings -> {
-                Snackbar.make(binding.root, "Configuración próximamente", Snackbar.LENGTH_SHORT).show()
+                // Configuración próximamente
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -210,6 +215,8 @@ class MainActivity : AppCompatActivity() {
             sessionManager.renewSession()
             startDateTimeUpdates() // Reiniciar actualización de fecha/hora
         }
+        // Re-aplicar modo kiosko cuando la app regresa al primer plano
+        enableKioskMode()
     }
     
     override fun onPause() {
@@ -222,5 +229,86 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         // Limpiar recursos
         stopDateTimeUpdates()
+    }
+    
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            // Re-aplicar modo kiosko si la app recupera el foco
+            enableKioskMode()
+        }
+    }
+    
+    // ==================== MODO KIOSKO ====================
+    
+    /**
+     * Habilita el modo kiosko (pantalla completa inmersiva)
+     * Oculta la barra de estado y la barra de navegación
+     */
+    private fun enableKioskMode() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // Android 11+ (API 30+)
+                window.setDecorFitsSystemWindows(false)
+                window.insetsController?.let { controller ->
+                    controller.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
+                    controller.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                }
+            } else {
+                // Android 10 y anteriores
+                @Suppress("DEPRECATION")
+                window.decorView.systemUiVisibility = (
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    or View.SYSTEM_UI_FLAG_FULLSCREEN
+                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                )
+            }
+            
+            // Mantener la pantalla encendida (útil para dispositivos en camiones)
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } catch (e: Exception) {
+            // Si falla el modo kiosko, continuar sin él
+            e.printStackTrace()
+        }
+    }
+    
+    /**
+     * Prevenir que el usuario salga de la app con el botón atrás
+     * Solo permitir logout a través de la opción del menú
+     */
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        val navController = findNavController(R.id.nav_host_fragment_content_main)
+        
+        // Si estamos en login, no hacer nada (no se puede salir)
+        if (navController.currentDestination?.id == R.id.nav_login) {
+            // Mostrar mensaje informativo
+            AlertDialog.Builder(this)
+                .setTitle("Modo Kiosko")
+                .setMessage("Esta aplicación está en modo kiosko. Para salir, cierre sesión primero.")
+                .setPositiveButton("Entendido", null)
+                .show()
+            return
+        }
+        
+        // Si estamos en home, mostrar confirmación
+        if (navController.currentDestination?.id == R.id.nav_home) {
+            AlertDialog.Builder(this)
+                .setTitle("Salir de la pantalla")
+                .setMessage("¿Desea regresar a la pantalla de inicio de sesión?")
+                .setPositiveButton("Sí") { _, _ ->
+                    showLogoutDialog()
+                }
+                .setNegativeButton("No", null)
+                .show()
+            return
+        }
+        
+        // Para otras pantallas, navegar normalmente
+        @Suppress("DEPRECATION")
+        super.onBackPressed()
     }
 }

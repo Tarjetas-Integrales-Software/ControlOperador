@@ -54,6 +54,8 @@ class MessageRepository {
         VoiceMessage(
             id = "v1",
             audioUrl = null,
+            // NOTA: Reemplazar con tu archivo real en res/raw/
+            // Por ejemplo: "android.resource://com.example.controloperador/raw/voice_message_1"
             audioFilePath = null,
             duration = 45,
             timestamp = Date(System.currentTimeMillis() - 1800000), // Hace 30 min

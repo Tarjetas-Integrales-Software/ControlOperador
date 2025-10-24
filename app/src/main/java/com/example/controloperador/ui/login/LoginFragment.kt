@@ -75,7 +75,7 @@ class LoginFragment : Fragment() {
                 }
                 is LoginViewModel.LoginState.Success -> {
                     hideLoading()
-                    handleLoginSuccess(state.operatorCode)
+                    handleLoginSuccess(state.operatorCode, state.operatorName)
                 }
                 is LoginViewModel.LoginState.Error -> {
                     hideLoading()
@@ -91,14 +91,20 @@ class LoginFragment : Fragment() {
         loginViewModel.validateOperatorCode(code)
     }
 
-    private fun handleLoginSuccess(operatorCode: String) {
+    private fun handleLoginSuccess(operatorCode: String, operatorName: String = "") {
         // Guardar sesión
         sessionManager.saveOperatorSession(operatorCode)
         
-        // Mostrar mensaje de éxito
+        // Mostrar mensaje de éxito con nombre del operador si está disponible
+        val message = if (operatorName.isNotEmpty()) {
+            "Bienvenido, $operatorName"
+        } else {
+            getString(R.string.login_success)
+        }
+        
         Snackbar.make(
             binding.root,
-            getString(R.string.login_success),
+            message,
             Snackbar.LENGTH_SHORT
         ).show()
 

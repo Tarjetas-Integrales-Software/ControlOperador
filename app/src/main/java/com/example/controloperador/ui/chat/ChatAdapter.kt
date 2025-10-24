@@ -11,9 +11,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class ChatAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+class ChatAdapter(initialMessages: List<TextMessage> = emptyList()) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    private var messages: List<TextMessage> = emptyList()
+    private var messages: List<TextMessage> = initialMessages
     
     companion object {
         private const val VIEW_TYPE_SENT = 1

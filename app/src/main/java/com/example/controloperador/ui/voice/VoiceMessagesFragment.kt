@@ -1,8 +1,6 @@
 package com.example.controloperador.ui.voice
 
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -13,6 +11,7 @@ import com.example.controloperador.R
 import com.example.controloperador.data.MessageRepository
 import com.example.controloperador.data.model.VoiceMessage
 import com.example.controloperador.databinding.FragmentVoiceMessagesBinding
+import com.example.controloperador.utils.AudioPlayerHelper
 
 class VoiceMessagesFragment : Fragment() {
 
@@ -22,10 +21,9 @@ class VoiceMessagesFragment : Fragment() {
     private val messageRepository = MessageRepository()
     private lateinit var voiceAdapter: VoiceMessageAdapter
     
-    // Control de reproducción simulada
+    // Control de reproducción con AudioPlayerHelper
+    private var audioPlayer: AudioPlayerHelper? = null
     private var currentPlayingMessage: VoiceMessage? = null
-    private var playbackHandler: Handler? = null
-    private var playbackRunnable: Runnable? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -35,10 +33,49 @@ class VoiceMessagesFragment : Fragment() {
         _binding = FragmentVoiceMessagesBinding.inflate(inflater, container, false)
         val root: View = binding.root
         
+        // Inicializar AudioPlayer
+        audioPlayer = AudioPlayerHelper(requireContext())
+        setupAudioPlayer()
+        
         setupRecyclerView()
         loadVoiceMessages()
         
         return root
+    }
+    
+    private fun setupAudioPlayer() {
+        audioPlayer?.apply {
+            // Listener cuando termina la reproducción
+            setOnCompletionListener { messageId ->
+                currentPlayingMessage = null
+                voiceAdapter.setPlayingMessage(null)
+                Toast.makeText(
+                    requireContext(),
+                    "Reproducción finalizada",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            
+            // Listener de errores
+            setOnErrorListener { messageId, error ->
+                currentPlayingMessage = null
+                voiceAdapter.setPlayingMessage(null)
+                Toast.makeText(
+                    requireContext(),
+                    "Error al reproducir: $error",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            
+            // Listener cuando el audio está listo
+            setOnPreparedListener { messageId, duration ->
+                Toast.makeText(
+                    requireContext(),
+                    "Reproduciendo audio ($duration segundos)",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
     }
     
     private fun setupRecyclerView() {
@@ -66,9 +103,18 @@ class VoiceMessagesFragment : Fragment() {
     }
     
     private fun handlePlayPause(message: VoiceMessage) {
-        if (currentPlayingMessage?.id == message.id) {
+        val player = audioPlayer ?: return
+        
+        if (currentPlayingMessage?.id == message.id && player.isPlaying()) {
             // Pausar el mensaje actual
-            stopPlayback()
+            player.pause()
+            voiceAdapter.setPlayingMessage(null)
+            currentPlayingMessage = null
+        } else if (currentPlayingMessage?.id == message.id && !player.isPlaying()) {
+            // Reanudar el mensaje pausado
+            player.resume()
+            voiceAdapter.setPlayingMessage(message.id)
+            currentPlayingMessage = message
         } else {
             // Reproducir nuevo mensaje
             startPlayback(message)
@@ -76,8 +122,10 @@ class VoiceMessagesFragment : Fragment() {
     }
     
     private fun startPlayback(message: VoiceMessage) {
+        val player = audioPlayer ?: return
+        
         // Detener reproducción anterior si existe
-        stopPlayback()
+        player.stop()
         
         currentPlayingMessage = message
         voiceAdapter.setPlayingMessage(message.id)
@@ -85,42 +133,48 @@ class VoiceMessagesFragment : Fragment() {
         // Marcar como reproducido
         messageRepository.markVoiceMessageAsPlayed(message.id)
         
-        // Mostrar toast de reproducción (simulada)
-        Toast.makeText(
-            requireContext(),
-            getString(R.string.voice_play),
-            Toast.LENGTH_SHORT
-        ).show()
-        
-        // Simular reproducción con un handler
-        playbackHandler = Handler(Looper.getMainLooper())
-        playbackRunnable = Runnable {
-            // Cuando termina la reproducción
-            stopPlayback()
+        // Determinar qué método de reproducción usar
+        val started = if (message.audioFilePath != null) {
+            // Si tiene path local, reproducir desde ahí
+            player.playAudioFromPath(message.audioFilePath, message.id)
+        } else if (message.audioUrl != null) {
+            // Si tiene URL, reproducir desde URL
+            player.playAudioFromPath(message.audioUrl, message.id)
+        } else {
+            // Usar audio de ejemplo de res/raw/ (cambiar R.raw.sample_audio por tu archivo)
+            // Por ahora mostramos mensaje de error
             Toast.makeText(
                 requireContext(),
-                "Reproducción finalizada",
+                "No hay archivo de audio disponible",
                 Toast.LENGTH_SHORT
             ).show()
+            currentPlayingMessage = null
+            voiceAdapter.setPlayingMessage(null)
+            false
         }
         
-        // Programar el fin de la reproducción según la duración
-        playbackHandler?.postDelayed(playbackRunnable!!, message.duration * 1000L)
+        if (!started) {
+            currentPlayingMessage = null
+            voiceAdapter.setPlayingMessage(null)
+        }
     }
     
     private fun stopPlayback() {
+        audioPlayer?.stop()
         currentPlayingMessage = null
         voiceAdapter.setPlayingMessage(null)
-        
-        // Cancelar el runnable programado
-        playbackRunnable?.let { playbackHandler?.removeCallbacks(it) }
-        playbackHandler = null
-        playbackRunnable = null
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        stopPlayback()
+        audioPlayer?.release() // IMPORTANTE: Liberar MediaPlayer
+        audioPlayer = null
         _binding = null
+    }
+    
+    override fun onPause() {
+        super.onPause()
+        // Pausar reproducción cuando el fragment no esté visible
+        audioPlayer?.pause()
     }
 }

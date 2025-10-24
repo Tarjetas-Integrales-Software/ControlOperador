@@ -35,13 +35,6 @@
             app:destination="@id/nav_voice" />
     </fragment>
 
-    <!-- Gallery Fragment (Unidades) -->
-    <fragment
-        android:id="@+id/nav_gallery"
-        android:name="com.example.controloperador.ui.gallery.GalleryFragment"
-        android:label="@string/menu_gallery"
-        tools:layout="@layout/fragment_gallery" />
-
     <!-- Slideshow Fragment (Reportes) -->
     <fragment
         android:id="@+id/nav_slideshow"

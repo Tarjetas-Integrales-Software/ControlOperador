@@ -4,6 +4,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -11,6 +12,7 @@ import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.widget.TextView
+import android.widget.Toast
 import com.google.android.material.navigation.NavigationView
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
@@ -58,6 +60,9 @@ class MainActivity : AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        
+        // Mostrar Android ID al inicio
+        showAndroidIdDialog()
         
         // Habilitar modo kiosko (pantalla completa inmersiva)
         // IMPORTANTE: Debe llamarse DESPUÉS de setContentView()
@@ -240,6 +245,52 @@ class MainActivity : AppCompatActivity() {
     }
     
     // ==================== MODO KIOSKO ====================
+    
+    /**
+     * Muestra un diálogo con el Android ID del dispositivo
+     * Se muestra durante 50 segundos al iniciar la aplicación
+     */
+    private fun showAndroidIdDialog() {
+        try {
+            // Obtener el Android ID del dispositivo
+            val androidId = Settings.Secure.getString(
+                contentResolver,
+                Settings.Secure.ANDROID_ID
+            )
+            
+            // Crear el diálogo
+            val dialog = AlertDialog.Builder(this)
+                .setTitle("ID del Dispositivo")
+                .setMessage("Android ID:\n\n$androidId\n\nEste diálogo se cerrará en 50 segundos.")
+                .setCancelable(true)
+                .setPositiveButton("Copiar ID") { _, _ ->
+                    // Copiar al portapapeles
+                    val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    val clip = android.content.ClipData.newPlainText("Android ID", androidId)
+                    clipboard.setPrimaryClip(clip)
+                    Toast.makeText(this, "ID copiado al portapapeles", Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton("Cerrar", null)
+                .create()
+            
+            dialog.show()
+            
+            // Auto-cerrar después de 50 segundos
+            Handler(Looper.getMainLooper()).postDelayed({
+                if (dialog.isShowing) {
+                    dialog.dismiss()
+                }
+            }, 50000) // 50 segundos
+            
+        } catch (e: Exception) {
+            // Si falla, mostrar Toast simple
+            Toast.makeText(
+                this,
+                "Error al obtener Android ID: ${e.message}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
     
     /**
      * Habilita el modo kiosko (pantalla completa inmersiva)

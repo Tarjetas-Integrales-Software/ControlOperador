@@ -9,11 +9,23 @@ import java.util.UUID
 
 /**
  * Repositorio para gestionar mensajes de texto y voz
+ * Implementa patrón Singleton para compartir datos entre fragmentos
  * TODO: Implementar con API REST y base de datos local (Room)
  */
-class MessageRepository {
+class MessageRepository private constructor() {
     
-    // Datos mock para desarrollo
+    companion object {
+        @Volatile
+        private var INSTANCE: MessageRepository? = null
+        
+        fun getInstance(): MessageRepository {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: MessageRepository().also { INSTANCE = it }
+            }
+        }
+    }
+    
+    // Datos mock para desarrollo - compartidos entre HomeFragment y ChatFragment
     private val textMessages = mutableListOf(
         TextMessage(
             id = "1",
@@ -139,6 +151,32 @@ class MessageRepository {
             isFromOperator = true,
             senderName = "Yo",
             messageType = messageType,
+            isRead = true
+        )
+        
+        textMessages.add(newMessage)
+        
+        // TODO: Enviar a API
+        // apiService.sendMessage(newMessage)
+        
+        return newMessage
+    }
+    
+    /**
+     * Envía un mensaje de texto personalizado
+     * @param content Contenido del mensaje
+     * @return El mensaje enviado
+     * 
+     * TODO: Implementar con llamada a API
+     */
+    fun sendTextMessage(content: String): TextMessage {
+        val newMessage = TextMessage(
+            id = UUID.randomUUID().toString(),
+            content = content,
+            timestamp = Date(),
+            isFromOperator = true,
+            senderName = "Yo",
+            messageType = null,
             isRead = true
         )
         

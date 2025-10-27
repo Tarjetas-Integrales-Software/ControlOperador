@@ -6,8 +6,11 @@ import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -18,6 +21,10 @@ import com.example.controloperador.data.model.VoiceMessage
 import com.example.controloperador.databinding.FragmentHomeBinding
 import com.example.controloperador.ui.login.SessionManager
 import com.example.controloperador.ui.chat.ChatAdapter
+import com.example.controloperador.ui.chat.ChatViewModel
+import com.example.controloperador.ui.chat.MessagesState
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.button.MaterialButton
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -29,10 +36,16 @@ class HomeFragment : Fragment() {
     private val binding get() = _binding!!
     
     private lateinit var sessionManager: SessionManager
-    private val messageRepository = MessageRepository()
+    private val messageRepository = MessageRepository.getInstance() // Singleton compartido
+    
+    // ViewModel compartido con ChatFragment para sincronizar conversaciones
+    private val chatViewModel: ChatViewModel by activityViewModels()
     
     // Adaptador para el chat integrado (solo en landscape)
     private var chatAdapter: ChatAdapter? = null
+    
+    // Lista de mensajes predeterminados cargados desde backend
+    private var predefinedMessages: List<com.example.controloperador.data.api.model.TextMessage> = emptyList()
     
     // Handler para actualizar el timer en tiempo real
     private val handler = Handler(Looper.getMainLooper())
@@ -60,6 +73,8 @@ class HomeFragment : Fragment() {
         setupWelcomeMessage()
         startRealtimeTimer() // Nuevo: iniciar timer en tiempo real
         setupIntegratedChat() // Nuevo: configurar chat integrado en landscape
+        observeChatViewModel() // Observar mensajes compartidos con ChatFragment
+        loadPredefinedMessages() // Cargar mensajes predeterminados del backend
         loadMessagesSummary()
         setupClickListeners()
 
@@ -76,6 +91,56 @@ class HomeFragment : Fragment() {
      */
     private fun startRealtimeTimer() {
         handler.post(timerRunnable)
+    }
+    
+    /**
+     * Observa los cambios en el ViewModel compartido con ChatFragment
+     * Mantiene sincronizada la conversación entre ambas pantallas
+     */
+    private fun observeChatViewModel() {
+        // Observar estado de carga
+        chatViewModel.messagesState.observe(viewLifecycleOwner) { state ->
+            when (state) {
+                is MessagesState.Loading -> {
+                    // Mostrar indicador de carga si es necesario
+                }
+                is MessagesState.Success -> {
+                    // Mensajes cargados exitosamente
+                }
+                is MessagesState.Error -> {
+                    // Mostrar mensaje de error (los mensajes locales ya están como fallback)
+                    Toast.makeText(requireContext(), state.message, Toast.LENGTH_SHORT).show()
+                }
+                is MessagesState.Idle -> {
+                    // Estado inicial
+                }
+            }
+        }
+        
+        // Observar mensajes de texto predeterminados
+        chatViewModel.textMessages.observe(viewLifecycleOwner) { messages ->
+            predefinedMessages = messages
+        }
+        
+        // Observar nombre del corredor (opcional)
+        chatViewModel.corridorName.observe(viewLifecycleOwner) { corridorName ->
+            // Podrías mostrar el nombre del corredor en algún lugar de la UI
+        }
+    }
+    
+    /**
+     * Carga los mensajes predeterminados desde el backend
+     */
+    private fun loadPredefinedMessages() {
+        val operatorCode = sessionManager.getOperatorCode()
+        
+        if (operatorCode == "54321") {
+            // Usuario de prueba offline: usar mensajes locales
+            chatViewModel.loadPredefinedMessages(operatorCode, useLocal = true)
+        } else {
+            // Usuario normal: intentar cargar desde backend
+            chatViewModel.loadPredefinedMessages(operatorCode ?: "")
+        }
     }
     
     /**
@@ -110,54 +175,99 @@ class HomeFragment : Fragment() {
     }
     
     /**
-     * Muestra el diálogo con respuestas predeterminadas
-     * Redirige a la pantalla de chat donde se cargan dinámicamente desde el backend
+     * Muestra el Bottom Sheet con respuestas predeterminadas (Material Design 3)
+     * Las opciones se cargan dinámicamente desde el backend
      */
     private fun showPredefinedResponsesDialog() {
-        // En lugar de mostrar un diálogo local, navegar a la pantalla de chat
-        // donde se cargan las respuestas predeterminadas dinámicamente desde el backend
-        findNavController().navigate(R.id.action_home_to_chat)
+        // Verificar que hay mensajes disponibles
+        if (predefinedMessages.isEmpty()) {
+            Toast.makeText(
+                requireContext(),
+                "Cargando mensajes predeterminados...",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
         
-        android.widget.Toast.makeText(
-            requireContext(),
-            "Selecciona un mensaje predeterminado",
-            android.widget.Toast.LENGTH_SHORT
-        ).show()
+        // Crear Bottom Sheet Dialog (Material Design 3)
+        val bottomSheetDialog = BottomSheetDialog(requireContext())
+        val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_predefined_responses, null)
+        bottomSheetDialog.setContentView(sheetView)
+        
+        // Obtener el contenedor de botones en el bottom sheet
+        val container = sheetView.findViewById<LinearLayout>(R.id.responsesContainer)
+        container?.removeAllViews() // Limpiar botones anteriores
+        
+        // Crear botones dinámicamente según los mensajes del backend
+        predefinedMessages.forEach { message ->
+            val button = MaterialButton(
+                requireContext(),
+                null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle
+            ).apply {
+                id = View.generateViewId()
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    bottomMargin = resources.getDimensionPixelSize(R.dimen.button_margin)
+                }
+                text = message.nombre // Título del mensaje
+                textAlignment = View.TEXT_ALIGNMENT_TEXT_START
+                textSize = 13f
+                setPadding(
+                    resources.getDimensionPixelSize(R.dimen.button_padding_horizontal),
+                    paddingTop,
+                    resources.getDimensionPixelSize(R.dimen.button_padding_horizontal),
+                    paddingBottom
+                )
+                cornerRadius = resources.getDimensionPixelSize(R.dimen.button_corner_radius)
+                
+                setOnClickListener {
+                    sendPredefinedResponse(message.mensaje)
+                    bottomSheetDialog.dismiss()
+                }
+            }
+            
+            container.addView(button)
+        }
+        
+        // Botón de cancelar
+        sheetView.findViewById<View>(R.id.cancelButton)?.setOnClickListener {
+            bottomSheetDialog.dismiss()
+        }
+        
+        bottomSheetDialog.show()
     }
     
     /**
      * Envía una respuesta predeterminada
+     * Agrega el mensaje a la conversación compartida entre HomeFragment y ChatFragment
      */
     private fun sendPredefinedResponse(response: String) {
-        // Agregar el mensaje a la lista (simulado)
+        // Agregar mensaje al repositorio compartido (será visible en ambos fragmentos)
+        val newMessage = messageRepository.sendTextMessage(response)
+        
+        // Actualizar el chat integrado en landscape si existe
         chatAdapter?.let { adapter ->
-            val newMessage = TextMessage(
-                id = System.currentTimeMillis().toString(),
-                content = response,
-                timestamp = Date(System.currentTimeMillis()),
-                senderName = "Operador",
-                isFromOperator = true,
-                isRead = true
-            )
-            
-            // Agregar mensaje y actualizar
-            val summary = messageRepository.getMessagesSummary()
-            val currentMessages = summary.recentTextMessages.toMutableList()
-            currentMessages.add(newMessage)
-            adapter.updateMessages(currentMessages)
+            val allMessages = messageRepository.getAllTextMessages()
+            adapter.updateMessages(allMessages)
             
             // Scroll al último mensaje
             binding.root.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.messagesRecyclerView)?.let {
-                it.scrollToPosition(currentMessages.size - 1)
+                it.scrollToPosition(allMessages.size - 1)
             }
-            
-            // Mostrar feedback
-            android.widget.Toast.makeText(
-                requireContext(),
-                getString(R.string.messages_sent),
-                android.widget.Toast.LENGTH_SHORT
-            ).show()
         }
+        
+        // TODO: Enviar al backend
+        // messagesRepository.sendMessage(operatorCode, response)
+        
+        // Mostrar feedback
+        Toast.makeText(
+            requireContext(),
+            getString(R.string.messages_sent),
+            Toast.LENGTH_SHORT
+        ).show()
     }
     
     private fun loadMessagesSummary() {

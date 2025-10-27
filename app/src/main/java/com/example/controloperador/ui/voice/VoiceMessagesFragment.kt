@@ -18,7 +18,7 @@ class VoiceMessagesFragment : Fragment() {
     private var _binding: FragmentVoiceMessagesBinding? = null
     private val binding get() = _binding!!
     
-    private val messageRepository = MessageRepository()
+    private val messageRepository = MessageRepository.getInstance() // Singleton compartido
     private lateinit var voiceAdapter: VoiceMessageAdapter
     
     // Control de reproducción con AudioPlayerHelper

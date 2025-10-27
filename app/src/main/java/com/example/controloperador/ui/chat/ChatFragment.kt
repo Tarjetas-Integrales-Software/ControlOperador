@@ -8,7 +8,7 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.controloperador.R
 import com.example.controloperador.data.MessageRepository
@@ -23,12 +23,12 @@ class ChatFragment : Fragment() {
     private var _binding: FragmentChatBinding? = null
     private val binding get() = _binding!!
     
-    private val messageRepository = MessageRepository()
+    private val messageRepository = MessageRepository.getInstance() // Singleton compartido
     private lateinit var chatAdapter: ChatAdapter
     private lateinit var sessionManager: SessionManager
     
-    // ViewModel para cargar mensajes predeterminados
-    private val viewModel: ChatViewModel by viewModels()
+    // ViewModel compartido con HomeFragment para sincronizar conversaciones
+    private val viewModel: ChatViewModel by activityViewModels()
     
     // Lista de mensajes de texto predeterminados cargados
     private var textMessages: List<com.example.controloperador.data.api.model.TextMessage> = emptyList()
@@ -233,13 +233,21 @@ class ChatFragment : Fragment() {
      * Envía una respuesta dinámica cargada desde el backend
      */
     private fun sendDynamicResponse(message: com.example.controloperador.data.api.model.TextMessage) {
-        // TODO: Implementar envío real al backend
-        // Por ahora solo mostramos el mensaje
+        // Enviar el mensaje usando el repositorio compartido
+        messageRepository.sendTextMessage(message.mensaje)
+        
+        // Recargar los mensajes en el RecyclerView
+        loadMessages()
+        
+        // Mostrar confirmación
         Toast.makeText(
             requireContext(),
-            "Enviando: ${message.nombre}\n${message.mensaje}",
-            Toast.LENGTH_LONG
+            "Enviando: ${message.nombre}",
+            Toast.LENGTH_SHORT
         ).show()
+        
+        // TODO: Implementar envío real al backend
+        // messagesRepository.sendPredefinedMessage(operatorCode, message.id)
     }
     
     private fun sendResponse(messageType: MessageType) {

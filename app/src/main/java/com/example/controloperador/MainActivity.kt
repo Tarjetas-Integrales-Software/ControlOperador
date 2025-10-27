@@ -294,7 +294,7 @@ class MainActivity : AppCompatActivity() {
     
     /**
      * Habilita el modo kiosko (pantalla completa inmersiva)
-     * Oculta la barra de estado y la barra de navegación
+     * Oculta completamente la barra de estado y la barra de navegación
      */
     private fun enableKioskMode() {
         try {
@@ -302,24 +302,53 @@ class MainActivity : AppCompatActivity() {
                 // Android 11+ (API 30+)
                 window.setDecorFitsSystemWindows(false)
                 window.insetsController?.let { controller ->
+                    // Ocultar barras de estado y navegación
                     controller.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
+                    
+                    // BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE permite que las barras aparezcan al deslizar
+                    // pero se ocultan automáticamente después de unos segundos
                     controller.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                }
+                
+                // Listener para volver a ocultar las barras cuando aparezcan por swipe
+                window.decorView.setOnApplyWindowInsetsListener { view, insets ->
+                    // Si las barras se vuelven visibles, ocultarlas de nuevo
+                    val insetsCompat = insets.getInsets(WindowInsets.Type.systemBars())
+                    if (insetsCompat.bottom > 0 || insetsCompat.top > 0) {
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            window.insetsController?.hide(
+                                WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars()
+                            )
+                        }, 3000) // Ocultar después de 3 segundos
+                    }
+                    view.onApplyWindowInsets(insets)
                 }
             } else {
                 // Android 10 y anteriores
                 @Suppress("DEPRECATION")
                 window.decorView.systemUiVisibility = (
-                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                    or View.SYSTEM_UI_FLAG_FULLSCREEN
-                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY // Modo pegajoso: las barras se ocultan automáticamente
+                    or View.SYSTEM_UI_FLAG_FULLSCREEN    // Ocultar barra de estado
+                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION // Ocultar barra de navegación
                     or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                     or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                     or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                 )
+                
+                // Listener para restaurar el modo inmersivo cuando las barras aparezcan
+                window.decorView.setOnSystemUiVisibilityChangeListener { visibility ->
+                    if (visibility and View.SYSTEM_UI_FLAG_FULLSCREEN == 0) {
+                        // Las barras están visibles, ocultarlas de nuevo
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            enableKioskMode()
+                        }, 2000)
+                    }
+                }
             }
             
             // Mantener la pantalla encendida (útil para dispositivos en camiones)
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            
         } catch (e: Exception) {
             // Si falla el modo kiosko, continuar sin él
             e.printStackTrace()

@@ -47,4 +47,11 @@ interface ApiService {
      */
     @POST("secomsa/messages/predefined")
     suspend fun getPredefinedMessages(@Body request: LoginRequest): Response<ApiResponse<PredefinedMessagesResponse>>
+    
+    /**
+     * Enviar reportes de entrada/salida al servidor
+     * POST /api/v1/secomsa/reportes
+     */
+    @POST("secomsa/reportes")
+    suspend fun sendReportes(@Body request: ReportesRequest): Response<ApiResponse<ReportesResponse>>
 }

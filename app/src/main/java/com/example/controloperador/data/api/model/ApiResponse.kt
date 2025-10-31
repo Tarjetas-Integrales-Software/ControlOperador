@@ -121,3 +121,41 @@ data class PredefinedMessage(
     val category: String? = null,
     val order: Int? = null
 )
+
+/**
+ * Request para enviar reportes al servidor
+ */
+data class ReportesRequest(
+    val reportes: List<ReporteData>
+)
+
+/**
+ * Datos de un reporte individual
+ */
+data class ReporteData(
+    val id: Long,  // ID local del reporte
+    val operator_code: String,
+    val nombre: String,
+    val apellido_paterno: String,
+    val apellido_materno: String,
+    val entrada: String,  // Formato ISO 8601: "2024-01-15T08:30:00Z"
+    val salida: String?,  // Formato ISO 8601: "2024-01-15T17:45:00Z"
+    val tiempo_operando: Double  // Horas trabajadas
+)
+
+/**
+ * Respuesta del servidor al enviar reportes
+ */
+data class ReportesResponse(
+    val processed: Int,  // Cantidad de reportes procesados exitosamente
+    val failed: Int,  // Cantidad de reportes fallidos
+    val errors: List<ReporteError>? = null  // Detalles de errores (si hay)
+)
+
+/**
+ * Error individual en un reporte
+ */
+data class ReporteError(
+    val id: Long,  // ID local del reporte que falló
+    val message: String  // Mensaje de error
+)

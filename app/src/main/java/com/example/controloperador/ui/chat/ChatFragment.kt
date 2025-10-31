@@ -104,8 +104,17 @@ class ChatFragment : Fragment() {
     
     private fun setupRecyclerView() {
         chatAdapter = ChatAdapter()
+        
+        // Configurar LinearLayoutManager para chat convencional
+        // - stackFromEnd = false: items se apilan desde arriba (orden normal)
+        // - reverseLayout = false: no invertir el orden de los items
+        val layoutManager = LinearLayoutManager(requireContext()).apply {
+            stackFromEnd = false  // Los mensajes llenan desde arriba
+            reverseLayout = false // Orden normal: antiguos arriba, nuevos abajo
+        }
+        
         binding.messagesRecyclerView.apply {
-            layoutManager = LinearLayoutManager(requireContext())
+            this.layoutManager = layoutManager
             adapter = chatAdapter
         }
     }

@@ -22,10 +22,12 @@ import androidx.navigation.ui.setupWithNavController
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AlertDialog
+import androidx.lifecycle.lifecycleScope
 import com.example.controloperador.databinding.ActivityMainBinding
 import com.example.controloperador.ui.login.SessionManager
 import com.example.controloperador.data.OperatorRepository
 import com.example.controloperador.data.OperatorInfo
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -187,10 +189,102 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun performLogout() {
-        sessionManager.clearSession()
+        // Obtener código del operador antes de limpiar la sesión
+        val operatorCode = sessionManager.getOperatorCode()
         
-        val navController = findNavController(R.id.nav_host_fragment_content_main)
-        navController.navigate(R.id.nav_login)
+        if (operatorCode != null) {
+            // Registrar salida y sincronizar reportes
+            registerExitAndSync(operatorCode)
+        } else {
+            // Si no hay código de operador, solo limpiar sesión y navegar
+            sessionManager.clearSession()
+            val navController = findNavController(R.id.nav_host_fragment_content_main)
+            navController.navigate(R.id.nav_login)
+        }
+    }
+    
+    /**
+     * Registra la salida del operador y sincroniza todos los reportes pendientes
+     * Este método se ejecuta cuando el usuario cierra sesión
+     */
+    private fun registerExitAndSync(operatorCode: String) {
+        // Mostrar diálogo de progreso
+        val progressDialog = AlertDialog.Builder(this)
+            .setTitle("Cerrando sesión")
+            .setMessage("Guardando información y sincronizando reportes...")
+            .setCancelable(false)
+            .create()
+        progressDialog.show()
+        
+        // Ejecutar en coroutine
+        lifecycleScope.launch {
+            try {
+                val app = application as ControlOperadorApp
+                val repository = app.appContainer.attendanceRepository
+                
+                // 1. Registrar salida (actualizar registro actual con hora de salida)
+                android.util.Log.d("MainActivity", "Registrando salida para operador: $operatorCode")
+                val exitLog = repository.registerExit(operatorCode)
+                
+                if (exitLog != null) {
+                    android.util.Log.d("MainActivity", "✓ Salida registrada - ID: ${exitLog.id}")
+                    android.util.Log.d("MainActivity", "  Tiempo operado: ${exitLog.tiempoOperando} horas")
+                    
+                    // 2. Intentar sincronizar el reporte recién cerrado inmediatamente
+                    android.util.Log.d("MainActivity", "Intentando sincronizar reporte recién cerrado...")
+                    val syncSuccess = repository.syncSingleReport(exitLog)
+                    
+                    if (syncSuccess) {
+                        android.util.Log.d("MainActivity", "✓ Reporte actual sincronizado exitosamente")
+                    } else {
+                        android.util.Log.w("MainActivity", "⚠ No se pudo sincronizar reporte actual, se reintentará después")
+                    }
+                } else {
+                    android.util.Log.w("MainActivity", "⚠ No se encontró registro abierto para cerrar")
+                }
+                
+                // 3. Sincronizar TODOS los reportes pendientes (enviado=0)
+                android.util.Log.d("MainActivity", "Sincronizando todos los reportes pendientes...")
+                val (successful, failed) = repository.syncUnsentReports()
+                
+                android.util.Log.d("MainActivity", "Resultado de sincronización:")
+                android.util.Log.d("MainActivity", "  - Exitosos: $successful")
+                android.util.Log.d("MainActivity", "  - Fallidos: $failed")
+                
+                // Cerrar diálogo
+                progressDialog.dismiss()
+                
+                // Mostrar resultado
+                val message = when {
+                    successful > 0 && failed == 0 -> 
+                        "✓ Sesión cerrada\n$successful reportes sincronizados"
+                    successful > 0 && failed > 0 -> 
+                        "⚠ Sesión cerrada\n$successful sincronizados, $failed pendientes"
+                    failed > 0 -> 
+                        "⚠ Sesión cerrada\n$failed reportes pendientes (sin conexión)"
+                    else -> 
+                        "✓ Sesión cerrada"
+                }
+                
+                Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
+                
+            } catch (e: Exception) {
+                android.util.Log.e("MainActivity", "✗ Error en proceso de logout", e)
+                progressDialog.dismiss()
+                
+                Toast.makeText(
+                    this@MainActivity,
+                    "⚠ Sesión cerrada (error al sincronizar)",
+                    Toast.LENGTH_LONG
+                ).show()
+            } finally {
+                // Siempre limpiar sesión y navegar al login
+                sessionManager.clearSession()
+                
+                val navController = findNavController(R.id.nav_host_fragment_content_main)
+                navController.navigate(R.id.nav_login)
+            }
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

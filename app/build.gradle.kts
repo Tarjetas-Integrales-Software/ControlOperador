@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    id("kotlin-kapt") // Para Room compiler
 }
 
 android {
@@ -62,6 +63,14 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.gson)
+    
+    // Room para base de datos local
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    kapt(libs.room.compiler)
+    
+    // MPAndroidChart para gráficas
+    implementation(libs.mpandroidchart)
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

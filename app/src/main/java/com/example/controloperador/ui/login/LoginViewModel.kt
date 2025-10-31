@@ -26,6 +26,11 @@ class LoginViewModel : ViewModel() {
     private val _operatorName = MutableLiveData<String>()
     val operatorName: LiveData<String> = _operatorName
     
+    // Almacenar respuesta completa del login para acceso a datos del operador
+    private var lastLoginResponse: LoginResponse? = null
+    
+    fun getLastLoginResponse(): LoginResponse? = lastLoginResponse
+    
     companion object {
         private const val TAG = "LoginViewModel"
     }
@@ -94,6 +99,9 @@ class LoginViewModel : ViewModel() {
                     val loginResponse = result.data
                     Log.d(TAG, "Operator code: ${loginResponse.operator.operator_code}")
                     Log.d(TAG, "Operator name: ${loginResponse.operator.name}")
+                    
+                    // Guardar respuesta completa para acceso posterior
+                    lastLoginResponse = loginResponse
                     
                     _operatorCode.value = loginResponse.operator.operator_code
                     _operatorName.value = loginResponse.operator.name

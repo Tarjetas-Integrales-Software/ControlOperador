@@ -7,6 +7,8 @@
     android:layout_height="match_parent"
     android:fillViewport="true"
     android:background="@color/login_background"
+    android:fitsSystemWindows="false"
+    android:clipToPadding="false"
     tools:context=".ui.home.HomeFragment">
 
 
@@ -14,7 +16,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="16dp"
+        android:fitsSystemWindows="false"
+        android:clipToPadding="false">
 
         <!-- Header con timer en tiempo real -->
         <LinearLayout

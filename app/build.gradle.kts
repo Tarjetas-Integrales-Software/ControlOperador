@@ -72,6 +72,9 @@ dependencies {
     // MPAndroidChart para gráficas
     implementation(libs.mpandroidchart)
     
+    // WorkManager para sincronización en background
+    implementation(libs.work.runtime.ktx)
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

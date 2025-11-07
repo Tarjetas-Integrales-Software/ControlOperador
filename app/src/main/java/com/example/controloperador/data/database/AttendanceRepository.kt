@@ -115,12 +115,25 @@ class AttendanceRepository(
     
     /**
      * Obtiene estadísticas diarias de la última semana
+     * @param operatorCode Código del operador (null para todos)
      */
-    suspend fun getWeeklyStats(): List<DailyStats> {
+    suspend fun getWeeklyStats(operatorCode: String? = null): List<DailyStats> {
         val calendar = Calendar.getInstance().apply {
             add(Calendar.DAY_OF_YEAR, -7)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
         }
-        return attendanceLogDao.getDailyStats(calendar.time)
+        val startDateMillis = calendar.timeInMillis
+        
+        Log.d(TAG, "📊 Obteniendo estadísticas desde: ${calendar.time}")
+        Log.d(TAG, "👤 Filtrado por operador: ${operatorCode ?: "TODOS"}")
+        
+        val stats = attendanceLogDao.getDailyStats(startDateMillis, operatorCode)
+        Log.d(TAG, "📈 Estadísticas obtenidas: ${stats.size} días")
+        
+        return stats
     }
     
     /**

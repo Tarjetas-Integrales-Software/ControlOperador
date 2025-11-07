@@ -50,7 +50,8 @@ class ReportesAdapter : ListAdapter<AttendanceLog, ReportesAdapter.ReporteViewHo
             // Fecha de salida (o "En curso" si aún no ha salido)
             if (reporte.salida != null) {
                 tvFechaSalida.text = dateFormatter.format(reporte.salida!!)
-                tvTiempoOperando.text = String.format("%.2fh", reporte.tiempoOperando)
+                // Convertir horas decimales a formato HH:MM
+                tvTiempoOperando.text = formatHoursToHHMM(reporte.tiempoOperando)
             } else {
                 tvFechaSalida.text = "En curso..."
                 tvTiempoOperando.text = "-"
@@ -66,6 +67,19 @@ class ReportesAdapter : ListAdapter<AttendanceLog, ReportesAdapter.ReporteViewHo
                 ivEstadoSync.setImageResource(android.R.drawable.ic_menu_upload)
                 ivEstadoSync.setColorFilter(itemView.context.getColor(R.color.accent_gold))
             }
+        }
+        
+        /**
+         * Convierte horas decimales a formato HH:MM
+         * Ejemplos:
+         * - 2.98h → 02:59
+         * - 25.73h → 25:44
+         * - 66.11h → 66:07
+         */
+        private fun formatHoursToHHMM(horasDecimales: Double): String {
+            val horas = horasDecimales.toInt()
+            val minutos = ((horasDecimales - horas) * 60).toInt()
+            return String.format("%02d:%02d", horas, minutos)
         }
     }
 

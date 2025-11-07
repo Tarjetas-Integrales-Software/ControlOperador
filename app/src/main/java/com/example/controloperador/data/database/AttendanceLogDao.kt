@@ -85,16 +85,21 @@ interface AttendanceLogDao {
     
     /**
      * Obtiene registros agrupados por día para estadísticas
+     * Incluye tanto registros cerrados (con salida) como abiertos (calculando tiempo hasta ahora)
      */
     @Query("""
         SELECT DATE(entrada / 1000, 'unixepoch', 'localtime') as date,
-               SUM(tiempoOperando) as totalHours
+               SUM(CASE 
+                   WHEN salida IS NOT NULL THEN tiempoOperando
+                   ELSE CAST((strftime('%s', 'now') * 1000 - entrada) AS REAL) / 3600000.0
+               END) as totalHours
         FROM reportes 
-        WHERE entrada >= :startDate AND salida IS NOT NULL
+        WHERE entrada >= :startDateMillis 
+          AND (:operatorCode IS NULL OR operatorCode = :operatorCode)
         GROUP BY DATE(entrada / 1000, 'unixepoch', 'localtime')
         ORDER BY date DESC
     """)
-    suspend fun getDailyStats(startDate: Date): List<DailyStats>
+    suspend fun getDailyStats(startDateMillis: Long, operatorCode: String?): List<DailyStats>
 }
 
 /**

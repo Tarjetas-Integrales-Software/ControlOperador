@@ -124,6 +124,7 @@ class SlideshowFragment : Fragment() {
         
         // Observar estadísticas semanales
         viewModel.weeklyStats.observe(viewLifecycleOwner) { stats ->
+            android.util.Log.d("SlideshowFragment", "🔔 Observer de weeklyStats recibió ${stats.size} estadísticas")
             updateBarChart(stats)
             updatePieChart(stats)
         }
@@ -190,12 +191,24 @@ class SlideshowFragment : Fragment() {
         
         val entries = mutableListOf<BarEntry>()
         val labels = mutableListOf<String>()
-        val dateFormat = SimpleDateFormat("EEE dd", Locale.getDefault())
+        
+        // Formateadores de fecha
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val outputFormat = SimpleDateFormat("EEE dd", Locale.getDefault())
         
         stats.forEachIndexed { index, stat ->
             entries.add(BarEntry(index.toFloat(), stat.totalHours.toFloat()))
-            labels.add(dateFormat.format(stat.date))
-            android.util.Log.d("SlideshowFragment", "  Barra $index: ${dateFormat.format(stat.date)} = ${stat.totalHours}h")
+            
+            // Convertir String "2025-11-07" a formato legible "Jue 07"
+            try {
+                val date = inputFormat.parse(stat.date)
+                labels.add(if (date != null) outputFormat.format(date) else stat.date.substring(5))
+                android.util.Log.d("SlideshowFragment", "  Barra $index: ${labels.last()} = ${stat.totalHours}h")
+            } catch (e: Exception) {
+                // Si falla el parseo, usar los últimos 5 caracteres (MM-dd)
+                labels.add(stat.date.substring(5))
+                android.util.Log.w("SlideshowFragment", "Error parseando fecha: ${stat.date}", e)
+            }
         }
         
         val dataSet = BarDataSet(entries, "Horas Trabajadas").apply {
@@ -234,12 +247,24 @@ class SlideshowFragment : Fragment() {
         }
         
         val entries = mutableListOf<PieEntry>()
-        val dateFormat = SimpleDateFormat("EEE", Locale.getDefault())
+        
+        // Formateadores de fecha
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val outputFormat = SimpleDateFormat("EEE", Locale.getDefault())
         
         stats.forEach { stat ->
             if (stat.totalHours > 0) {
-                entries.add(PieEntry(stat.totalHours.toFloat(), dateFormat.format(stat.date)))
-                android.util.Log.d("SlideshowFragment", "  Segmento: ${dateFormat.format(stat.date)} = ${stat.totalHours}h")
+                // Convertir String "2025-11-07" a formato legible "Jue"
+                try {
+                    val date = inputFormat.parse(stat.date)
+                    val label = if (date != null) outputFormat.format(date) else stat.date.substring(8)
+                    entries.add(PieEntry(stat.totalHours.toFloat(), label))
+                    android.util.Log.d("SlideshowFragment", "  Segmento: $label = ${stat.totalHours}h")
+                } catch (e: Exception) {
+                    // Si falla el parseo, usar los últimos 2 caracteres (día del mes)
+                    entries.add(PieEntry(stat.totalHours.toFloat(), stat.date.substring(8)))
+                    android.util.Log.w("SlideshowFragment", "Error parseando fecha: ${stat.date}", e)
+                }
             }
         }
         

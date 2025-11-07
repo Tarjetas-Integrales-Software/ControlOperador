@@ -15,14 +15,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.controloperador.R
-import com.example.controloperador.data.MessageRepository
-import com.example.controloperador.data.model.TextMessage
-import com.example.controloperador.data.model.VoiceMessage
 import com.example.controloperador.databinding.FragmentHomeBinding
 import com.example.controloperador.ui.login.SessionManager
-import com.example.controloperador.ui.chat.ChatAdapter
 import com.example.controloperador.ui.chat.ChatViewModel
-import com.example.controloperador.ui.chat.MessagesState
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
 import java.text.SimpleDateFormat
@@ -36,16 +31,12 @@ class HomeFragment : Fragment() {
     private val binding get() = _binding!!
     
     private lateinit var sessionManager: SessionManager
-    private val messageRepository = MessageRepository.getInstance() // Singleton compartido
     
     // ViewModel compartido con ChatFragment para sincronizar conversaciones
     private val chatViewModel: ChatViewModel by activityViewModels()
     
     // Adaptador para el chat integrado (solo en landscape)
-    private var chatAdapter: ChatAdapter? = null
-    
-    // Lista de mensajes predeterminados cargados desde backend
-    private var predefinedMessages: List<com.example.controloperador.data.api.model.TextMessage> = emptyList()
+    private var chatAdapter: com.example.controloperador.ui.chat.ChatAdapter? = null
     
     // Handler para actualizar el timer en tiempo real
     private val handler = Handler(Looper.getMainLooper())
@@ -55,6 +46,16 @@ class HomeFragment : Fragment() {
             // Usar findViewById para null-safety (el timer puede no existir en portrait)
             binding.root.findViewById<TextView>(R.id.textViewDateTime)?.text = dateTimeFormat.format(Date())
             handler.postDelayed(this, 1000) // Actualizar cada segundo
+        }
+    }
+    
+    // Handler para sincronizar chat cada 30 segundos (solo cuando está visible)
+    private val chatSyncHandler = Handler(Looper.getMainLooper())
+    private val chatSyncRunnable = object : Runnable {
+        override fun run() {
+            android.util.Log.d("HomeFragment", "⏰ Auto-sync chat triggered (30s interval)")
+            chatViewModel.syncMessagesNow() // Sincronizar mensajes
+            chatSyncHandler.postDelayed(this, 30_000) // Repetir cada 30 segundos
         }
     }
 
@@ -71,10 +72,9 @@ class HomeFragment : Fragment() {
         sessionManager = SessionManager(requireContext())
         
         setupWelcomeMessage()
-        startRealtimeTimer() // Nuevo: iniciar timer en tiempo real
-        setupIntegratedChat() // Nuevo: configurar chat integrado en landscape
+        startRealtimeTimer() // Iniciar timer en tiempo real
+        setupIntegratedChat() // Configurar chat integrado en landscape
         observeChatViewModel() // Observar mensajes compartidos con ChatFragment
-        loadPredefinedMessages() // Cargar mensajes predeterminados del backend
         loadMessagesSummary()
         setupClickListeners()
 
@@ -98,49 +98,23 @@ class HomeFragment : Fragment() {
      * Mantiene sincronizada la conversación entre ambas pantallas
      */
     private fun observeChatViewModel() {
-        // Observar estado de carga
-        chatViewModel.messagesState.observe(viewLifecycleOwner) { state ->
-            when (state) {
-                is MessagesState.Loading -> {
-                    // Mostrar indicador de carga si es necesario
-                }
-                is MessagesState.Success -> {
-                    // Mensajes cargados exitosamente
-                }
-                is MessagesState.Error -> {
-                    // Mostrar mensaje de error (los mensajes locales ya están como fallback)
-                    Toast.makeText(requireContext(), state.message, Toast.LENGTH_SHORT).show()
-                }
-                is MessagesState.Idle -> {
-                    // Estado inicial
-                }
-            }
+        val operatorCode = sessionManager.getOperatorCode() ?: return
+        
+        // Inicializar chat con el código del operador
+        chatViewModel.initializeChat(operatorCode)
+        
+        // Observar contador de mensajes no leídos
+        chatViewModel.unreadCount.observe(viewLifecycleOwner) { count ->
+            updateUnreadBadge(count)
         }
         
-        // Observar mensajes de texto predeterminados
-        chatViewModel.textMessages.observe(viewLifecycleOwner) { messages ->
-            predefinedMessages = messages
+        // Observar respuestas predefinidas dinámicas
+        chatViewModel.predefinedResponses.observe(viewLifecycleOwner) { responses ->
+            // Actualizar bottom sheet con respuestas del servidor
+            // (implementación en setupResponseButton)
         }
         
-        // Observar nombre del corredor (opcional)
-        chatViewModel.corridorName.observe(viewLifecycleOwner) { corridorName ->
-            // Podrías mostrar el nombre del corredor en algún lugar de la UI
-        }
-    }
-    
-    /**
-     * Carga los mensajes predeterminados desde el backend
-     */
-    private fun loadPredefinedMessages() {
-        val operatorCode = sessionManager.getOperatorCode()
-        
-        if (operatorCode == "54321") {
-            // Usuario de prueba offline: usar mensajes locales
-            chatViewModel.loadPredefinedMessages(operatorCode, useLocal = true)
-        } else {
-            // Usuario normal: intentar cargar desde backend
-            chatViewModel.loadPredefinedMessages(operatorCode ?: "")
-        }
+        // Nota: La observación de mensajes se hace en setupIntegratedChat() para landscape
     }
     
     /**
@@ -153,13 +127,10 @@ class HomeFragment : Fragment() {
         
         if (messagesRecyclerView != null && responseButton != null) {
             // Estamos en landscape, configurar chat integrado
-            val summary = messageRepository.getMessagesSummary()
-            val messages = summary.recentTextMessages
-            chatAdapter = ChatAdapter(messages)
+            val operatorCode = sessionManager.getOperatorCode() ?: return
+            chatAdapter = com.example.controloperador.ui.chat.ChatAdapter(operatorCode)
             
             // Configurar LinearLayoutManager para chat convencional
-            // - stackFromEnd = false: items se apilan desde arriba (orden normal)
-            // - reverseLayout = false: no invertir el orden de los items
             val layoutManager = LinearLayoutManager(requireContext()).apply {
                 stackFromEnd = false  // Los mensajes llenan desde arriba
                 reverseLayout = false // Orden normal: antiguos arriba, nuevos abajo
@@ -170,9 +141,18 @@ class HomeFragment : Fragment() {
                 adapter = chatAdapter
             }
             
-            // Scroll al último mensaje (más reciente)
-            if (messages.isNotEmpty()) {
-                messagesRecyclerView.scrollToPosition(messages.size - 1)
+            // Auto-scroll al último mensaje cuando se actualizan (solo últimos 10)
+            chatViewModel.todayMessages.observe(viewLifecycleOwner) { messages ->
+                val lastMessages = messages.takeLast(10)
+                chatAdapter?.submitList(lastMessages) {
+                    // Callback después de que DiffUtil actualiza la lista
+                    if (lastMessages.isNotEmpty()) {
+                        messagesRecyclerView.post {
+                            // Scroll suave al último mensaje visible
+                            messagesRecyclerView.smoothScrollToPosition(lastMessages.size - 1)
+                        }
+                    }
+                }
             }
             
             // Configurar botón de respuestas predeterminadas
@@ -183,15 +163,19 @@ class HomeFragment : Fragment() {
     }
     
     /**
-     * Muestra el Bottom Sheet con respuestas predeterminadas (Material Design 3)
+     * Muestra el Bottom Sheet con respuestas predefinidas (Material Design 3)
      * Las opciones se cargan dinámicamente desde el backend
      */
     private fun showPredefinedResponsesDialog() {
-        // Verificar que hay mensajes disponibles
-        if (predefinedMessages.isEmpty()) {
+        // Cargar respuestas desde servidor
+        chatViewModel.loadPredefinedResponses()
+        
+        // Obtener respuestas actuales
+        val responses = chatViewModel.predefinedResponses.value
+        if (responses.isNullOrEmpty()) {
             Toast.makeText(
                 requireContext(),
-                "Cargando mensajes predeterminados...",
+                "Cargando respuestas predeterminadas...",
                 Toast.LENGTH_SHORT
             ).show()
             return
@@ -202,12 +186,22 @@ class HomeFragment : Fragment() {
         val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_predefined_responses, null)
         bottomSheetDialog.setContentView(sheetView)
         
+        // ✨ Expandir el BottomSheet a pantalla completa
+        bottomSheetDialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+        bottomSheetDialog.behavior.skipCollapsed = true
+        
+        // Configurar altura para ocupar toda la pantalla
+        sheetView.layoutParams = android.widget.FrameLayout.LayoutParams(
+            android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+            android.widget.FrameLayout.LayoutParams.MATCH_PARENT
+        )
+        
         // Obtener el contenedor de botones en el bottom sheet
         val container = sheetView.findViewById<LinearLayout>(R.id.responsesContainer)
         container?.removeAllViews() // Limpiar botones anteriores
         
-        // Crear botones dinámicamente según los mensajes del backend
-        predefinedMessages.forEach { message ->
+        // Crear botones dinámicamente según las respuestas del backend
+        responses.forEach { response ->
             val button = MaterialButton(
                 requireContext(),
                 null,
@@ -220,7 +214,7 @@ class HomeFragment : Fragment() {
                 ).apply {
                     bottomMargin = resources.getDimensionPixelSize(R.dimen.button_margin)
                 }
-                text = message.nombre // Título del mensaje
+                text = response.mensaje // Texto de la respuesta
                 textAlignment = View.TEXT_ALIGNMENT_TEXT_START
                 textSize = 13f
                 setPadding(
@@ -232,7 +226,7 @@ class HomeFragment : Fragment() {
                 cornerRadius = resources.getDimensionPixelSize(R.dimen.button_corner_radius)
                 
                 setOnClickListener {
-                    sendPredefinedResponse(message.mensaje)
+                    sendPredefinedResponse(response.mensaje)
                     bottomSheetDialog.dismiss()
                 }
             }
@@ -245,6 +239,11 @@ class HomeFragment : Fragment() {
             bottomSheetDialog.dismiss()
         }
         
+        // Botón de cerrar (X) en el header
+        sheetView.findViewById<View>(R.id.closeButton)?.setOnClickListener {
+            bottomSheetDialog.dismiss()
+        }
+        
         bottomSheetDialog.show()
     }
     
@@ -253,22 +252,8 @@ class HomeFragment : Fragment() {
      * Agrega el mensaje a la conversación compartida entre HomeFragment y ChatFragment
      */
     private fun sendPredefinedResponse(response: String) {
-        // Agregar mensaje al repositorio compartido (será visible en ambos fragmentos)
-        val newMessage = messageRepository.sendTextMessage(response)
-        
-        // Actualizar el chat integrado en landscape si existe
-        chatAdapter?.let { adapter ->
-            val allMessages = messageRepository.getAllTextMessages()
-            adapter.updateMessages(allMessages)
-            
-            // Scroll al último mensaje
-            binding.root.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.messagesRecyclerView)?.let {
-                it.scrollToPosition(allMessages.size - 1)
-            }
-        }
-        
-        // TODO: Enviar al backend
-        // messagesRepository.sendMessage(operatorCode, response)
+        // Enviar mensaje usando ChatViewModel (automáticamente sincroniza con backend)
+        chatViewModel.sendMessage(response)
         
         // Mostrar feedback
         Toast.makeText(
@@ -276,105 +261,58 @@ class HomeFragment : Fragment() {
             getString(R.string.messages_sent),
             Toast.LENGTH_SHORT
         ).show()
+        
+        // El auto-scroll se maneja en el observer de todayMessages en setupIntegratedChat()
     }
     
-    private fun loadMessagesSummary() {
-        val summary = messageRepository.getMessagesSummary()
-        
-        // Actualizar badge de mensajes de texto
-        if (summary.unreadTextMessages > 0) {
+    /**
+     * Actualiza el badge de mensajes no leídos
+     */
+    private fun updateUnreadBadge(count: Int) {
+        if (count > 0) {
             binding.unreadTextBadge.visibility = View.VISIBLE
-            binding.unreadTextBadge.text = "${summary.unreadTextMessages} sin leer"
+            binding.unreadTextBadge.text = "$count sin leer"
         } else {
             binding.unreadTextBadge.visibility = View.GONE
         }
-        
-        // Actualizar badge de mensajes de voz
-        if (summary.unplayedVoiceMessages > 0) {
-            binding.unplayedVoiceBadge.visibility = View.VISIBLE
-            binding.unplayedVoiceBadge.text = "${summary.unplayedVoiceMessages} sin reproducir"
-        } else {
-            binding.unplayedVoiceBadge.visibility = View.GONE
-        }
-        
-        // Mostrar últimos mensajes de texto
-        displayRecentTextMessages(summary.recentTextMessages)
-        
-        // Mostrar últimos mensajes de voz
-        displayRecentVoiceMessages(summary.recentVoiceMessages)
     }
     
-    private fun displayRecentTextMessages(messages: List<TextMessage>) {
-        // Solo en portrait - en landscape se usa el RecyclerView del chat
+    private fun loadMessagesSummary() {
+        // TODO: Implementar resumen de mensajes con nuevo sistema
+        
+        // El badge de mensajes se actualiza en observeChatViewModel() con unreadCount
+    }
+    
+    private fun displayRecentTextMessages() {
+        // TODO: Implementar con nuevo sistema de chat
+        // Por ahora, simplemente mostrar mensaje vacío
         val textMessagesContainer = binding.root.findViewById<android.widget.LinearLayout>(R.id.textMessagesContainer)
         textMessagesContainer?.let { container ->
             container.removeAllViews()
             
-            if (messages.isEmpty()) {
-                val emptyView = TextView(requireContext()).apply {
-                    text = getString(R.string.messages_no_messages)
-                    textSize = 14f
-                    setTextColor(resources.getColor(R.color.text_secondary, null))
-                    setPadding(0, 16, 0, 16)
-                }
-                container.addView(emptyView)
-                return
+            val emptyView = TextView(requireContext()).apply {
+                text = "Use el chat completo para ver mensajes"
+                textSize = 14f
+                setTextColor(resources.getColor(R.color.text_secondary, null))
+                setPadding(0, 16, 0, 16)
             }
-            
-            messages.forEach { message ->
-                val itemView = layoutInflater.inflate(
-                    R.layout.item_text_message_summary,
-                    container,
-                    false
-                )
-                
-                itemView.findViewById<TextView>(R.id.messageSender).text = message.senderName
-                itemView.findViewById<TextView>(R.id.messageContent).text = message.content
-                itemView.findViewById<TextView>(R.id.messageTime).text = getRelativeTime(message.timestamp)
-                
-                itemView.setOnClickListener {
-                    findNavController().navigate(R.id.action_home_to_chat)
-                }
-                
-                container.addView(itemView)
-            }
+            container.addView(emptyView)
         }
     }
     
-    private fun displayRecentVoiceMessages(messages: List<VoiceMessage>) {
-        // Busca el contenedor - solo existe en layout portrait
+    private fun displayRecentVoiceMessages() {
+        // TODO: Implementar con nuevo sistema de mensajes de voz
         val voiceMessagesContainer = binding.root.findViewById<android.widget.LinearLayout>(R.id.voiceMessagesContainer)
         voiceMessagesContainer?.let { container ->
             container.removeAllViews()
         
-            if (messages.isEmpty()) {
-                val emptyView = TextView(requireContext()).apply {
-                    text = getString(R.string.messages_no_voice)
-                    textSize = 14f
-                    setTextColor(resources.getColor(R.color.text_secondary, null))
-                    setPadding(0, 16, 0, 16)
-                }
-                container.addView(emptyView)
-                return@let
+            val emptyView = TextView(requireContext()).apply {
+                text = "No hay mensajes de voz"
+                textSize = 14f
+                setTextColor(resources.getColor(R.color.text_secondary, null))
+                setPadding(0, 16, 0, 16)
             }
-        
-            messages.forEach { message ->
-                val itemView = layoutInflater.inflate(
-                    R.layout.item_voice_message_summary,
-                    container,
-                    false
-                )
-            
-                itemView.findViewById<TextView>(R.id.voiceSender).text = message.senderName
-                itemView.findViewById<TextView>(R.id.voiceDuration).text = formatDuration(message.duration)
-                itemView.findViewById<TextView>(R.id.voiceTime).text = getRelativeTime(message.timestamp)
-            
-                itemView.setOnClickListener {
-                    findNavController().navigate(R.id.action_home_to_voice)
-                }
-            
-                container.addView(itemView)
-            }
+            container.addView(emptyView)
         }
     }
     
@@ -416,9 +354,29 @@ class HomeFragment : Fragment() {
         return getString(R.string.voice_duration, minutes, secs)
     }
 
+    override fun onResume() {
+        super.onResume()
+        android.util.Log.d("HomeFragment", "🟢 Fragment resumed - Starting auto-sync")
+        
+        // Sincronizar inmediatamente al abrir
+        chatViewModel.syncMessagesNow()
+        
+        // Iniciar polling automático cada 30 segundos
+        chatSyncHandler.post(chatSyncRunnable)
+    }
+    
+    override fun onPause() {
+        super.onPause()
+        android.util.Log.d("HomeFragment", "🔴 Fragment paused - Stopping auto-sync")
+        
+        // Detener polling cuando el fragment no está visible
+        chatSyncHandler.removeCallbacks(chatSyncRunnable)
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         handler.removeCallbacks(timerRunnable) // Detener el timer
+        chatSyncHandler.removeCallbacks(chatSyncRunnable) // Detener sync de chat
         _binding = null
     }
 }

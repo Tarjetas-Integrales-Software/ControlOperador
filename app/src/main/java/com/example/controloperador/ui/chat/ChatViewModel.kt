@@ -1,125 +1,293 @@
 package com.example.controloperador.ui.chat
 
+import android.app.Application
 import android.util.Log
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
-import com.example.controloperador.data.api.MessagesRepository
+import com.example.controloperador.ControlOperadorApp
 import com.example.controloperador.data.api.Result
-import com.example.controloperador.data.api.model.TextMessage
-import com.example.controloperador.data.api.model.VoiceMessage
+import com.example.controloperador.data.api.model.chat.PredefinedResponse
+import com.example.controloperador.data.database.chat.ChatMessage
+import com.example.controloperador.data.database.chat.ChatRepository
+import com.example.controloperador.data.database.chat.Conversation
 import kotlinx.coroutines.launch
 
 /**
  * ViewModel para la pantalla de chat/mensajes
+ * Gestiona mensajes en tiempo real con sincronización bidireccional
  */
-class ChatViewModel : ViewModel() {
+class ChatViewModel(application: Application) : AndroidViewModel(application) {
     
     companion object {
         private const val TAG = "ChatViewModel"
     }
     
-    private val messagesRepository = MessagesRepository()
+    private val chatRepository: ChatRepository = 
+        (application as ControlOperadorApp).appContainer.chatRepository
     
-    // Estado de carga de mensajes predeterminados
-    private val _messagesState = MutableLiveData<MessagesState>(MessagesState.Idle)
-    val messagesState: LiveData<MessagesState> = _messagesState
+    // Código del operador actual
+    private val _operatorCode = MutableLiveData<String>()
     
-    // Lista de mensajes de texto predeterminados
-    private val _textMessages = MutableLiveData<List<TextMessage>>()
-    val textMessages: LiveData<List<TextMessage>> = _textMessages
+    // Conversación actual
+    private val _conversation = MutableLiveData<Conversation?>()
+    val conversation: LiveData<Conversation?> = _conversation
     
-    // Lista de mensajes de voz predeterminados
-    private val _voiceMessages = MutableLiveData<List<VoiceMessage>>()
-    val voiceMessages: LiveData<List<VoiceMessage>> = _voiceMessages
+    // Mensajes del día actual (se actualiza automáticamente desde Room)
+    val todayMessages: LiveData<List<ChatMessage>> = _operatorCode.switchMap { operatorCode ->
+        _conversation.switchMap { conversation ->
+            if (conversation != null) {
+                chatRepository.getTodayMessagesLive(conversation.id)
+            } else {
+                MutableLiveData(emptyList())
+            }
+        }
+    }
     
-    // Información del corredor
-    private val _corridorName = MutableLiveData<String>()
-    val corridorName: LiveData<String> = _corridorName
+    // Conteo de mensajes no leídos
+    val unreadCount: LiveData<Int> = _conversation.switchMap { conversation ->
+        if (conversation != null) {
+            chatRepository.getUnreadCountLive(conversation.id)
+        } else {
+            MutableLiveData(0)
+        }
+    }
+    
+    // Estado de envío de mensaje
+    private val _sendMessageState = MutableLiveData<SendMessageState>(SendMessageState.Idle)
+    val sendMessageState: LiveData<SendMessageState> = _sendMessageState
+    
+    // Respuestas predefinidas dinámicas desde el servidor
+    private val _predefinedResponses = MutableLiveData<List<PredefinedResponse>>()
+    val predefinedResponses: LiveData<List<PredefinedResponse>> = _predefinedResponses
+    
+    // Estado de carga de respuestas predefinidas
+    private val _responsesState = MutableLiveData<ResponsesState>(ResponsesState.Idle)
+    val responsesState: LiveData<ResponsesState> = _responsesState
     
     /**
-     * Carga los mensajes predeterminados desde el backend
-     * Si falla, usa los mensajes locales como fallback
+     * Inicializa el chat para un operador
      */
-    fun loadPredefinedMessages(operatorCode: String, useLocal: Boolean = false) {
-        if (useLocal) {
-            // Usar mensajes locales directamente (modo offline)
-            Log.d(TAG, "Loading local predefined messages (offline mode)")
-            _textMessages.value = messagesRepository.getLocalTextMessages()
-            _voiceMessages.value = emptyList()
-            _corridorName.value = "Modo Offline"
-            _messagesState.value = MessagesState.Success
+    fun initializeChat(operatorCode: String) {
+        if (_operatorCode.value == operatorCode) {
+            // Ya inicializado para este operador
             return
         }
         
+        _operatorCode.value = operatorCode
+        
         viewModelScope.launch {
-            _messagesState.value = MessagesState.Loading
-            Log.d(TAG, "Loading predefined messages for operator: $operatorCode")
+            try {
+                // Obtener o crear conversación
+                val conversation = chatRepository.getOrCreateConversation(operatorCode)
+                _conversation.value = conversation
+                
+                Log.d(TAG, "Chat initialized for operator: $operatorCode")
+                
+                // Cargar respuestas predefinidas
+                loadPredefinedResponses()
+                
+                // Marcar mensajes como leídos al abrir el chat
+                markAllMessagesAsRead()
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Error initializing chat", e)
+            }
+        }
+    }
+    
+    /**
+     * Envía un mensaje de texto
+     */
+    fun sendMessage(content: String) {
+        val operatorCode = _operatorCode.value ?: return
+        if (content.isBlank()) return
+        
+        _sendMessageState.value = SendMessageState.Sending
+        
+        viewModelScope.launch {
+            val result = chatRepository.sendMessage(
+                operatorCode = operatorCode,
+                content = content.trim()
+            )
             
-            when (val result = messagesRepository.getPredefinedMessages(operatorCode)) {
+            when (result) {
                 is Result.Success -> {
-                    Log.d(TAG, "Predefined messages loaded successfully:")
-                    Log.d(TAG, "  - Text: ${result.data.total_text_messages} messages")
-                    Log.d(TAG, "  - Voice: ${result.data.total_voice_messages} messages")
-                    Log.d(TAG, "  - Corredor: ${result.data.operator.corredor_nombre}")
+                    Log.d(TAG, "Message sent successfully")
+                    _sendMessageState.value = SendMessageState.Success
                     
-                    _textMessages.value = result.data.text_messages
-                    _voiceMessages.value = result.data.voice_messages
-                    _corridorName.value = result.data.operator.corredor_nombre
-                    _messagesState.value = MessagesState.Success
+                    // Resetear a Idle después de un momento
+                    kotlinx.coroutines.delay(500)
+                    _sendMessageState.value = SendMessageState.Idle
                 }
                 
                 is Result.Error -> {
-                    Log.e(TAG, "Error loading messages: ${result.message}")
-                    // Usar mensajes locales como fallback
-                    _textMessages.value = messagesRepository.getLocalTextMessages()
-                    _voiceMessages.value = emptyList()
-                    _corridorName.value = "Modo Offline"
-                    _messagesState.value = MessagesState.Error(
-                        "Error al cargar mensajes del servidor. Usando mensajes locales."
-                    )
+                    Log.e(TAG, "Error sending message: ${result.message}")
+                    _sendMessageState.value = SendMessageState.Error(result.message)
+                    
+                    // Resetear después de mostrar error
+                    kotlinx.coroutines.delay(3000)
+                    _sendMessageState.value = SendMessageState.Idle
                 }
                 
-                is Result.NetworkError -> {
-                    Log.e(TAG, "Network error loading messages")
-                    // Usar mensajes locales como fallback
-                    _textMessages.value = messagesRepository.getLocalTextMessages()
-                    _voiceMessages.value = emptyList()
-                    _corridorName.value = "Modo Offline"
-                    _messagesState.value = MessagesState.Error(
-                        "Sin conexión. Usando mensajes predeterminados locales."
-                    )
-                }
-                
-                is Result.Timeout -> {
-                    Log.e(TAG, "Timeout loading messages")
-                    // Usar mensajes locales como fallback
-                    _textMessages.value = messagesRepository.getLocalTextMessages()
-                    _voiceMessages.value = emptyList()
-                    _corridorName.value = "Modo Offline"
-                    _messagesState.value = MessagesState.Error(
-                        "Tiempo de espera agotado. Usando mensajes locales."
-                    )
+                else -> {
+                    // NetworkError o Timeout - el mensaje queda como PENDING
+                    Log.w(TAG, "Message saved as pending, will retry later")
+                    _sendMessageState.value = SendMessageState.Success
+                    
+                    kotlinx.coroutines.delay(500)
+                    _sendMessageState.value = SendMessageState.Idle
                 }
             }
         }
     }
     
     /**
-     * Recarga los mensajes predeterminados
+     * Envía una respuesta predefinida
      */
-    fun reloadMessages(operatorCode: String) {
-        loadPredefinedMessages(operatorCode, useLocal = false)
+    fun sendPredefinedResponse(response: PredefinedResponse) {
+        val operatorCode = _operatorCode.value ?: return
+        
+        _sendMessageState.value = SendMessageState.Sending
+        
+        viewModelScope.launch {
+            val result = chatRepository.sendMessage(
+                operatorCode = operatorCode,
+                content = response.mensaje,
+                isPredefinedResponse = true,
+                predefinedResponseId = response.id
+            )
+            
+            when (result) {
+                is Result.Success -> {
+                    Log.d(TAG, "Predefined response sent successfully")
+                    _sendMessageState.value = SendMessageState.Success
+                    
+                    kotlinx.coroutines.delay(500)
+                    _sendMessageState.value = SendMessageState.Idle
+                }
+                
+                is Result.Error -> {
+                    Log.e(TAG, "Error sending predefined response: ${result.message}")
+                    _sendMessageState.value = SendMessageState.Error(result.message)
+                    
+                    kotlinx.coroutines.delay(3000)
+                    _sendMessageState.value = SendMessageState.Idle
+                }
+                
+                else -> {
+                    _sendMessageState.value = SendMessageState.Success
+                    kotlinx.coroutines.delay(500)
+                    _sendMessageState.value = SendMessageState.Idle
+                }
+            }
+        }
+    }
+    
+    /**
+     * Carga las respuestas predefinadas desde el servidor
+     */
+    fun loadPredefinedResponses() {
+        viewModelScope.launch {
+            _responsesState.value = ResponsesState.Loading
+            
+            val result = chatRepository.getPredefinedResponses()
+            
+            when (result) {
+                is Result.Success -> {
+                    _predefinedResponses.value = result.data
+                    _responsesState.value = ResponsesState.Success
+                    Log.d(TAG, "Loaded ${result.data.size} predefined responses")
+                }
+                
+                is Result.Error -> {
+                    Log.e(TAG, "Error loading predefined responses: ${result.message}")
+                    _responsesState.value = ResponsesState.Error(result.message)
+                    // Mantener respuestas anteriores si las hay
+                }
+                
+                else -> {
+                    Log.w(TAG, "Network error loading predefined responses")
+                    _responsesState.value = ResponsesState.Error("Sin conexión")
+                }
+            }
+        }
+    }
+    
+    /**
+     * Marca todos los mensajes del día como leídos
+     */
+    fun markAllMessagesAsRead() {
+        val conversationId = _conversation.value?.id ?: return
+        
+        viewModelScope.launch {
+            chatRepository.markAllTodayAsRead(conversationId)
+            Log.d(TAG, "Marked all messages as read")
+        }
+    }
+    
+    /**
+     * Sincroniza mensajes inmediatamente (al abrir el chat)
+     */
+    fun syncMessagesNow() {
+        val conversationId = _conversation.value?.id ?: return
+        val operatorCode = _operatorCode.value ?: return
+        
+        viewModelScope.launch {
+            // Reintentar mensajes pendientes
+            val retriedCount = chatRepository.retryPendingMessages(conversationId, operatorCode)
+            if (retriedCount > 0) {
+                Log.d(TAG, "Retried $retriedCount pending messages")
+            }
+            
+            // Obtener mensajes nuevos del servidor
+            val result = chatRepository.fetchNewMessages(conversationId, operatorCode)
+            when (result) {
+                is Result.Success -> {
+                    Log.d(TAG, "Sync completed: ${result.data} new messages fetched")
+                }
+                is Result.Error -> {
+                    Log.e(TAG, "Sync error: ${result.message}")
+                }
+                else -> {
+                    Log.w(TAG, "Network issue during sync")
+                }
+            }
+        }
+    }
+    
+    /**
+     * Reintenta enviar mensajes pendientes manualmente
+     */
+    fun retryPendingMessages() {
+        val conversationId = _conversation.value?.id ?: return
+        val operatorCode = _operatorCode.value ?: return
+        
+        viewModelScope.launch {
+            val count = chatRepository.retryPendingMessages(conversationId, operatorCode)
+            Log.d(TAG, "Retried $count pending messages")
+        }
     }
 }
 
 /**
- * Estados posibles para la carga de mensajes
+ * Estados del envío de mensaje
  */
-sealed class MessagesState {
-    object Idle : MessagesState()
-    object Loading : MessagesState()
-    object Success : MessagesState()
-    data class Error(val message: String) : MessagesState()
+sealed class SendMessageState {
+    object Idle : SendMessageState()
+    object Sending : SendMessageState()
+    object Success : SendMessageState()
+    data class Error(val message: String) : SendMessageState()
+}
+
+/**
+ * Estados de carga de respuestas predefinidas
+ */
+sealed class ResponsesState {
+    object Idle : ResponsesState()
+    object Loading : ResponsesState()
+    object Success : ResponsesState()
+    data class Error(val message: String) : ResponsesState()
 }

@@ -74,19 +74,25 @@ class SlideshowViewModel(application: Application) : AndroidViewModel(applicatio
     fun loadWeeklyStats() {
         viewModelScope.launch {
             try {
-                val stats = repository.getWeeklyStats()
-                _weeklyStats.value = stats
+                val operatorCode = _currentOperatorCode.value
+                Log.d("SlideshowViewModel", "📊 Cargando estadísticas para operador: ${operatorCode ?: "TODOS"}")
+                
+                val stats = repository.getWeeklyStats(operatorCode)
                 
                 Log.d("SlideshowViewModel", "Estadísticas cargadas: ${stats.size} días")
                 stats.forEach { stat ->
                     Log.d("SlideshowViewModel", "  - ${stat.date}: ${stat.totalHours} horas")
                 }
                 
+                // IMPORTANTE: Actualizar LiveData para notificar a los observers
+                _weeklyStats.postValue(stats)
+                
                 // Calcular total
                 val total = stats.sumOf { it.totalHours }
-                _totalWeeklyHours.value = total
+                _totalWeeklyHours.postValue(total)
                 
                 Log.d("SlideshowViewModel", "Total horas semanales: $total")
+                Log.d("SlideshowViewModel", "✅ LiveData actualizado, observers deberían recibir datos")
             } catch (e: Exception) {
                 Log.e("SlideshowViewModel", "Error al cargar estadísticas", e)
             }

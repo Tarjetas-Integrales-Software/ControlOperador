@@ -51,6 +51,13 @@ class SlideshowViewModel(application: Application) : AndroidViewModel(applicatio
     private val _totalWeeklyHours = MutableLiveData<Double>(0.0)
     val totalWeeklyHours: LiveData<Double> = _totalWeeklyHours
 
+    // Conteo de reportes pendientes de sincronizar (enviado = 0 AND salida IS NOT NULL)
+    val unsentReportsCount: LiveData<Int> = allReportes.switchMap { reportes ->
+        val count = reportes.count { it.salida != null && it.enviado == 0 }
+        Log.d("SlideshowViewModel", "📊 Reportes pendientes de sincronizar: $count")
+        MutableLiveData(count)
+    }
+
     init {
         // Obtener código del operador actual
         val operatorCode = sessionManager.getOperatorCode()

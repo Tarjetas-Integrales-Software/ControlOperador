@@ -45,14 +45,40 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
-                <!-- Encabezado de la tabla -->
-                <com.google.android.material.textview.MaterialTextView
-                    android:layout_width="wrap_content"
+                <!-- Encabezado de la tabla con botón de sincronización -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Registro de Entradas y Salidas"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
-                    android:textColor="@color/primary_dark"
-                    android:layout_marginBottom="8dp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="8dp">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Registro de Entradas y Salidas"
+                        android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+                        android:textColor="@color/primary_dark" />
+
+                    <!-- Botón de sincronización manual (siempre visible) -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSyncReports"
+                        style="@style/Widget.Material3.Button.TonalButton.Icon"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:backgroundTint="@color/accent_gold"
+                        android:enabled="false"
+                        android:text="Sincronizar"
+                        android:textColor="@color/white"
+                        android:textColorHighlight="@color/white"
+                        android:textColorHint="@color/white"
+                        android:textSize="12sp"
+                        app:icon="@android:drawable/stat_notify_sync"
+                        app:iconGravity="start"
+                        app:iconSize="18dp"
+                        tools:enabled="true" />
+                </LinearLayout>
 
                 <!-- Indicador de sincronización -->
                 <LinearLayout
@@ -83,6 +109,22 @@
                         android:text="Sincronizando reportes..."
                         android:textColor="@android:color/white"
                         android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+
+                    <!-- Botón de sincronización durante proceso -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSyncInProgress"
+                        style="@style/Widget.Material3.Button.TextButton.Icon"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Reintentar"
+                        android:textSize="12sp"
+                        android:textColor="@android:color/white"
+                        app:icon="@android:drawable/stat_notify_sync"
+                        app:iconSize="18dp"
+                        app:iconTint="@android:color/white"
+                        app:iconGravity="start"
+                        android:visibility="gone"
+                        tools:visibility="visible" />
                 </LinearLayout>
 
                 <!-- Encabezados de la tabla -->
@@ -147,11 +189,13 @@
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvReportes"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:minHeight="200dp"
-                    android:maxHeight="400dp"
+                    android:layout_height="400dp"
+                    android:scrollbars="vertical"
+                    android:fadeScrollbars="false"
+                    android:nestedScrollingEnabled="true"
+                    android:overScrollMode="ifContentScrolls"
                     tools:listitem="@layout/item_reporte"
-                    tools:itemCount="5" />
+                    tools:itemCount="10" />
 
                 <!-- Mensaje cuando no hay datos -->
                 <LinearLayout

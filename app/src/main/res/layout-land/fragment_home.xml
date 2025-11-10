@@ -141,7 +141,7 @@
                         android:layout_weight="1"
                         android:background="@color/login_background"
                         android:clipToPadding="false"
-                        android:padding="12dp"
+                        android:padding="12dp" 
                         tools:listitem="@layout/item_text_message_sent" />
 
                     <!-- Botón para enviar respuesta predeterminada -->

@@ -200,7 +200,7 @@ class AttendanceRepository(
                     operator_code = log.operatorCode,
                     nombre = log.nombre,
                     apellido_paterno = log.apellidoPaterno,
-                    apellido_materno = log.apellidoMaterno,
+                    apellido_materno = log.apellidoMaterno.takeIf { it.isNotBlank() } ?: "N/A", // ⬅️ Convertir vacío a "N/A"
                     entrada = ISO_DATE_FORMAT.format(log.entrada),
                     salida = log.salida?.let { ISO_DATE_FORMAT.format(it) },
                     tiempo_operando = log.tiempoOperando
@@ -265,7 +265,7 @@ class AttendanceRepository(
                 operator_code = log.operatorCode,
                 nombre = log.nombre,
                 apellido_paterno = log.apellidoPaterno,
-                apellido_materno = log.apellidoMaterno,
+                apellido_materno = log.apellidoMaterno.takeIf { it.isNotBlank() } ?: "N/A", // ⬅️ Convertir vacío a "N/A"
                 entrada = ISO_DATE_FORMAT.format(log.entrada),
                 salida = ISO_DATE_FORMAT.format(log.salida!!),
                 tiempo_operando = log.tiempoOperando

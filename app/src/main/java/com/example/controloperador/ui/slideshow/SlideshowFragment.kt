@@ -37,6 +37,7 @@ class SlideshowFragment : Fragment() {
         
         setupRecyclerView()
         setupCharts()
+        setupClickListeners()
         observeData()
         
         return binding.root
@@ -46,6 +47,23 @@ class SlideshowFragment : Fragment() {
         super.onResume()
         // Recargar estadísticas cuando el fragment se hace visible
         viewModel.loadWeeklyStats()
+    }
+
+    /**
+     * Configura los click listeners de los botones
+     */
+    private fun setupClickListeners() {
+        // Botón de sincronización principal (siempre visible)
+        binding.btnSyncReports.setOnClickListener {
+            android.util.Log.d("SlideshowFragment", "🔄 Botón de sincronización presionado")
+            viewModel.syncUnsentReports()
+        }
+        
+        // Botón de reintento durante sincronización
+        binding.btnSyncInProgress.setOnClickListener {
+            android.util.Log.d("SlideshowFragment", "🔄 Botón de reintento presionado")
+            viewModel.syncUnsentReports()
+        }
     }
 
     /**
@@ -134,15 +152,31 @@ class SlideshowFragment : Fragment() {
             binding.tvTotalHorasSemana.text = String.format("%.2f hrs", total)
         }
         
+        // Observar conteo de reportes pendientes
+        viewModel.unsentReportsCount.observe(viewLifecycleOwner) { count ->
+            android.util.Log.d("SlideshowFragment", "📊 Reportes pendientes: $count")
+            // Habilitar/deshabilitar botón principal según haya pendientes
+            binding.btnSyncReports.isEnabled = count > 0
+            binding.btnSyncReports.text = if (count > 0) {
+                "Sincronizar ($count)"
+            } else {
+                "Sincronizar"
+            }
+        }
+        
         // Observar estado de sincronización
         viewModel.syncState.observe(viewLifecycleOwner) { state ->
             when (state) {
                 is SlideshowViewModel.SyncState.Idle -> {
                     binding.layoutSyncStatus.visibility = View.GONE
+                    binding.btnSyncReports.isEnabled = true // Re-habilitar botón principal
                 }
                 is SlideshowViewModel.SyncState.Loading -> {
                     binding.layoutSyncStatus.visibility = View.VISIBLE
                     binding.tvSyncStatus.text = "Sincronizando reportes..."
+                    binding.progressSync.visibility = View.VISIBLE
+                    binding.btnSyncInProgress.visibility = View.GONE
+                    binding.btnSyncReports.isEnabled = false // Deshabilitar durante sync
                 }
                 is SlideshowViewModel.SyncState.Success -> {
                     binding.layoutSyncStatus.visibility = View.GONE
@@ -152,18 +186,28 @@ class SlideshowFragment : Fragment() {
                     viewModel.resetSyncState()
                 }
                 is SlideshowViewModel.SyncState.PartialSuccess -> {
-                    binding.layoutSyncStatus.visibility = View.GONE
+                    // Mostrar botón de reintento para los fallidos
+                    binding.layoutSyncStatus.visibility = View.VISIBLE
+                    binding.tvSyncStatus.text = "⚠ ${state.failed} reportes fallidos"
+                    binding.progressSync.visibility = View.GONE
+                    binding.btnSyncInProgress.visibility = View.VISIBLE
+                    binding.btnSyncReports.isEnabled = true
+                    
                     Snackbar.make(binding.root, 
-                        "⚠ ${state.successful} exitosos, ${state.failed} fallidos", 
+                        "✓ ${state.successful} exitosos, ${state.failed} fallidos", 
                         Snackbar.LENGTH_LONG).show()
-                    viewModel.resetSyncState()
                 }
                 is SlideshowViewModel.SyncState.Error -> {
-                    binding.layoutSyncStatus.visibility = View.GONE
+                    // Mostrar botón de reintento
+                    binding.layoutSyncStatus.visibility = View.VISIBLE
+                    binding.tvSyncStatus.text = "✗ Error al sincronizar"
+                    binding.progressSync.visibility = View.GONE
+                    binding.btnSyncInProgress.visibility = View.VISIBLE
+                    binding.btnSyncReports.isEnabled = true
+                    
                     Snackbar.make(binding.root, 
                         "✗ Error: ${state.message}", 
                         Snackbar.LENGTH_LONG).show()
-                    viewModel.resetSyncState()
                 }
                 is SlideshowViewModel.SyncState.NoData -> {
                     binding.layoutSyncStatus.visibility = View.GONE
@@ -196,7 +240,8 @@ class SlideshowFragment : Fragment() {
         val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         val outputFormat = SimpleDateFormat("EEE dd", Locale.getDefault())
         
-        stats.forEachIndexed { index, stat ->
+        // Invertir lista para mostrar día actual a la derecha
+        stats.reversed().forEachIndexed { index, stat ->
             entries.add(BarEntry(index.toFloat(), stat.totalHours.toFloat()))
             
             // Convertir String "2025-11-07" a formato legible "Jue 07"

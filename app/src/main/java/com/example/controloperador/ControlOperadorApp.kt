@@ -10,6 +10,7 @@ import androidx.work.WorkManager
 import com.example.controloperador.data.AppContainer
 import com.example.controloperador.workers.ChatSyncWorker
 import com.example.controloperador.workers.CleanupChatWorker
+import com.example.controloperador.workers.UpdateCheckWorker
 import java.util.concurrent.TimeUnit
 
 /**
@@ -30,6 +31,9 @@ class ControlOperadorApp : Application() {
         // Programar workers de chat
         scheduleChatSync()
         scheduleCleanupWork()
+        
+        // Programar verificación de actualizaciones
+        scheduleUpdateCheck()
     }
     
     /**
@@ -69,4 +73,27 @@ class ControlOperadorApp : Application() {
             cleanupRequest
         )
     }
+    
+    /**
+     * Programa la verificación de actualizaciones cada 10 minutos
+     * Solo se ejecuta cuando hay conexión a internet
+     */
+    private fun scheduleUpdateCheck() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+        
+        val updateCheckRequest = PeriodicWorkRequestBuilder<UpdateCheckWorker>(
+            10, TimeUnit.MINUTES // Cada 10 minutos
+        )
+            .setConstraints(constraints)
+            .build()
+        
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            UpdateCheckWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            updateCheckRequest
+        )
+    }
 }
+

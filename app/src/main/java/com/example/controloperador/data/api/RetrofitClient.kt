@@ -77,4 +77,24 @@ object RetrofitClient {
     val chatApiService: ChatApiService by lazy {
         retrofit.create(ChatApiService::class.java)
     }
+    
+    /**
+     * Cliente Retrofit específico para GitHub API
+     * Base URL: https://api.github.com/
+     */
+    private val githubRetrofit: Retrofit by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://api.github.com/")
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create(gson))
+            .build()
+    }
+    
+    /**
+     * Servicio API para GitHub Releases
+     * Permite verificar actualizaciones de la app
+     */
+    val githubApiService: GitHubApiService by lazy {
+        githubRetrofit.create(GitHubApiService::class.java)
+    }
 }

@@ -20,11 +20,11 @@ class LoginViewModel : ViewModel() {
     private val _loginState = MutableLiveData<LoginState>()
     val loginState: LiveData<LoginState> = _loginState
 
-    private val _operatorCode = MutableLiveData<String>()
-    val operatorCode: LiveData<String> = _operatorCode
+    private val _operatorCode = MutableLiveData<String?>()
+    val operatorCode: LiveData<String?> = _operatorCode
     
-    private val _operatorName = MutableLiveData<String>()
-    val operatorName: LiveData<String> = _operatorName
+    private val _operatorName = MutableLiveData<String?>()
+    val operatorName: LiveData<String?> = _operatorName
     
     // Almacenar respuesta completa del login para acceso a datos del operador
     private var lastLoginResponse: LoginResponse? = null

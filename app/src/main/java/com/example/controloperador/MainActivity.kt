@@ -27,7 +27,10 @@ import com.example.controloperador.databinding.ActivityMainBinding
 import com.example.controloperador.ui.login.SessionManager
 import com.example.controloperador.data.OperatorRepository
 import com.example.controloperador.data.OperatorInfo
+import com.example.controloperador.data.repository.UpdateRepository
+import com.example.controloperador.utils.ApkInstaller
 import kotlinx.coroutines.launch
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -484,5 +487,45 @@ class MainActivity : AppCompatActivity() {
         // Para otras pantallas, navegar normalmente
         @Suppress("DEPRECATION")
         super.onBackPressed()
+    }
+    
+    /**
+     * Verifica si hay una actualización descargada pendiente de instalar
+     * Se ejecuta al iniciar la app
+     */
+    private fun checkForPendingUpdate() {
+        // Si el intent tiene el extra para instalar actualización
+        if (intent.getBooleanExtra("trigger_update_install", false)) {
+            lifecycleScope.launch {
+                try {
+                    val updateRepository = UpdateRepository(this@MainActivity)
+                    val updatesDir = updateRepository.getUpdatesDirectory()
+                    
+                    // Buscar APK descargado
+                    val apkFile = updatesDir.listFiles()?.firstOrNull { file ->
+                        file.name.endsWith(".apk")
+                    }
+                    
+                    if (apkFile != null && apkFile.exists()) {
+                        android.util.Log.d("MainActivity", "📦 APK encontrado: ${apkFile.name}")
+                        
+                        // Verificar si es válido
+                        if (ApkInstaller.isValidApk(this@MainActivity, apkFile)) {
+                            // Instalar APK
+                            ApkInstaller.installApk(this@MainActivity, apkFile)
+                        } else {
+                            android.util.Log.e("MainActivity", "❌ APK inválido")
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Error: APK descargado está corrupto",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("MainActivity", "Error verificando actualización", e)
+                }
+            }
+        }
     }
 }

@@ -75,8 +75,9 @@ class ControlOperadorApp : Application() {
     }
     
     /**
-     * Programa la verificación de actualizaciones cada 10 minutos
+     * Programa la verificación de actualizaciones cada 15 minutos
      * Solo se ejecuta cuando hay conexión a internet
+     * NOTA: Android requiere mínimo 15 minutos para PeriodicWork
      */
     private fun scheduleUpdateCheck() {
         val constraints = Constraints.Builder()
@@ -84,7 +85,7 @@ class ControlOperadorApp : Application() {
             .build()
         
         val updateCheckRequest = PeriodicWorkRequestBuilder<UpdateCheckWorker>(
-            10, TimeUnit.MINUTES // Cada 10 minutos
+            15, TimeUnit.MINUTES // Cada 15 minutos (mínimo de Android)
         )
             .setConstraints(constraints)
             .build()

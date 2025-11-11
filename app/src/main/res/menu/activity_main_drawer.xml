@@ -30,4 +30,14 @@
                 android:title="@string/menu_logout" />
         </menu>
     </item>
+    
+    <item android:title="Información">
+        <menu>
+            <item
+                android:id="@+id/nav_version"
+                android:icon="@android:drawable/ic_menu_info_details"
+                android:title="Versión"
+                android:enabled="false" />
+        </menu>
+    </item>
 </menu>

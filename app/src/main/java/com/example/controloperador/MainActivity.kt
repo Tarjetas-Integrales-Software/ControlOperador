@@ -115,6 +115,9 @@ class MainActivity : AppCompatActivity() {
         // Configurar logout desde el menú del drawer
         setupLogoutMenuItem(navView)
         
+        // Configurar versión de la app en el menú del drawer
+        setupVersionMenuItem(navView)
+        
         // Inicializar referencias a las vistas del header
         initializeHeaderViews()
         
@@ -178,6 +181,12 @@ class MainActivity : AppCompatActivity() {
             showLogoutDialog()
             true
         }
+    }
+
+    private fun setupVersionMenuItem(navView: NavigationView) {
+        val menu = navView.menu
+        val versionItem = menu.findItem(R.id.nav_version)
+        versionItem?.title = "Versión ${BuildConfig.VERSION_NAME}"
     }
 
     private fun showLogoutDialog() {
@@ -297,6 +306,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.action_install_update -> {
+                checkAndInstallPendingUpdates()
+                true
+            }
             R.id.action_settings -> {
                 // Configuración próximamente
                 true
@@ -525,6 +538,67 @@ class MainActivity : AppCompatActivity() {
                 } catch (e: Exception) {
                     android.util.Log.e("MainActivity", "Error verificando actualización", e)
                 }
+            }
+        }
+    }
+    
+    /**
+     * Verifica si hay actualizaciones descargadas pendientes de instalar
+     * Muestra un diálogo al usuario para instalarlas
+     */
+    private fun checkAndInstallPendingUpdates() {
+        lifecycleScope.launch {
+            try {
+                val updateRepository = UpdateRepository(this@MainActivity)
+                val updatesDir = updateRepository.getUpdatesDirectory()
+                
+                // Buscar APK descargado
+                val apkFile = updatesDir.listFiles()?.firstOrNull { file ->
+                    file.name.endsWith(".apk")
+                }
+                
+                if (apkFile != null && apkFile.exists()) {
+                    android.util.Log.d("MainActivity", "📦 Actualización pendiente encontrada: ${apkFile.name}")
+                    
+                    // Extraer versión del nombre del archivo
+                    val versionName = apkFile.name
+                        .removePrefix("ControlOperador-")
+                        .removeSuffix(".apk")
+                        .removeSuffix("-release")
+                    
+                    // Mostrar diálogo
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle("Actualización Disponible")
+                        .setMessage("Se descargó la versión $versionName.\n\n¿Deseas instalarla ahora?")
+                        .setPositiveButton("Instalar") { _, _ ->
+                            if (ApkInstaller.isValidApk(this@MainActivity, apkFile)) {
+                                ApkInstaller.installApk(this@MainActivity, apkFile)
+                            } else {
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    "Error: APK descargado está corrupto",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                        .setNegativeButton("Más tarde", null)
+                        .setIcon(android.R.drawable.stat_sys_download_done)
+                        .show()
+                } else {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "No hay actualizaciones pendientes",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    android.util.Log.d("MainActivity", "ℹ️ No hay actualizaciones pendientes")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("MainActivity", "Error verificando actualizaciones pendientes", e)
+                Toast.makeText(
+                    this@MainActivity,
+                    "Error al verificar actualizaciones",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }

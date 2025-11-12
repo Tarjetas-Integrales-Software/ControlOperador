@@ -49,6 +49,17 @@ data class SendMessageRequest(
 )
 
 /**
+ * Request para obtener mensajes del día
+ */
+data class TodayMessagesRequest(
+    @SerializedName("operator_code")
+    val operatorCode: String,
+    
+    @SerializedName("last_id")
+    val lastId: String? = null
+)
+
+/**
  * Response al enviar un mensaje
  */
 data class SendMessageResponse(

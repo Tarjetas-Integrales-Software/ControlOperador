@@ -45,12 +45,13 @@ object ApkInstaller {
      * 
      * @param context Contexto de la aplicación
      * @param apkFile Archivo APK a instalar
+     * @return true si se lanzó el instalador, false si falta permiso
      */
-    fun installApk(context: Context, apkFile: File) {
+    fun installApk(context: Context, apkFile: File): Boolean {
         try {
             if (!apkFile.exists()) {
                 Log.e(TAG, "❌ APK no existe: ${apkFile.absolutePath}")
-                return
+                return false
             }
             
             Log.d(TAG, "📲 Instalando APK: ${apkFile.name}")
@@ -60,8 +61,7 @@ object ApkInstaller {
             // Verificar permisos
             if (!canInstallPackages(context)) {
                 Log.w(TAG, "⚠️ Sin permisos para instalar APKs")
-                openInstallPermissionSettings(context)
-                return
+                return false
             }
             
             // Crear URI con FileProvider
@@ -82,9 +82,11 @@ object ApkInstaller {
             // Lanzar instalador del sistema
             context.startActivity(intent)
             Log.d(TAG, "✅ Intent de instalación lanzado")
+            return true
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error instalando APK", e)
+            return false
         }
     }
     

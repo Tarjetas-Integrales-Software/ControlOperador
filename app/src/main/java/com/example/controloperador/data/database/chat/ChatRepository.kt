@@ -237,9 +237,10 @@ class ChatRepository(
                 
                 Log.d(TAG, "🔍 Fetching new messages for operator: $operatorCode")
                 Log.d(TAG, "📡 Last synced server ID: $lastServerId")
-                Log.d(TAG, "🌐 Calling API: secomsa/chat/messages/today")
+                Log.d(TAG, "🌐 Calling API: GET secomsa/chat/messages/today")
+                Log.d(TAG, "📝 Parameters: operator_code=$operatorCode, last_id=$lastServerId")
                 
-                // Llamar a la API
+                // Llamar a la API con query parameters
                 val response = chatApiService.getTodayMessages(operatorCode, lastServerId)
                 
                 Log.d(TAG, "📥 API Response code: ${response.code()}")

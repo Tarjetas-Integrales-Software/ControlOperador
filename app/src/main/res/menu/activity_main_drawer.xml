@@ -21,23 +21,17 @@
             android:icon="@drawable/ic_menu_slideshow"
             android:title="@string/menu_slideshow" />
     </group>
+
+    <group android:id="@+id/group_info">
+        <item
+            android:id="@+id/nav_version"
+            android:icon="@android:drawable/ic_menu_info_details"
+            android:title="Versión"
+            android:enabled="false" />
+
+        <item
+            android:id="@+id/nav_logout"
+            android:title="@string/menu_logout" />
+    </group>
     
-    <item android:title="Sesión">
-        <menu>
-            <item
-                android:id="@+id/nav_logout"
-                android:icon="@drawable/ic_logout"
-                android:title="@string/menu_logout" />
-        </menu>
-    </item>
-    
-    <item android:title="Información">
-        <menu>
-            <item
-                android:id="@+id/nav_version"
-                android:icon="@android:drawable/ic_menu_info_details"
-                android:title="Versión"
-                android:enabled="false" />
-        </menu>
-    </item>
 </menu>

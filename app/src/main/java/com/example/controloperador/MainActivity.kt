@@ -28,8 +28,13 @@ import com.example.controloperador.ui.login.SessionManager
 import com.example.controloperador.data.OperatorRepository
 import com.example.controloperador.data.OperatorInfo
 import com.example.controloperador.data.repository.UpdateRepository
+import com.example.controloperador.data.database.AppDatabase
+import com.example.controloperador.data.database.chat.ChatRepository
+import com.example.controloperador.data.api.RetrofitClient
 import com.example.controloperador.utils.ApkInstaller
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -177,7 +182,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupLogoutMenuItem(navView: NavigationView) {
-        navView.menu.findItem(R.id.nav_logout)?.setOnMenuItemClickListener {
+        val logoutItem = navView.menu.findItem(R.id.nav_logout)
+        
+        // Inflar la vista personalizada para el logout
+        val customView = layoutInflater.inflate(R.layout.menu_item_logout, null)
+        logoutItem?.actionView = customView
+        
+        // Configurar el click en toda la vista
+        customView.setOnClickListener {
+            showLogoutDialog()
+        }
+        
+        // También mantener el click listener del item por si acaso
+        logoutItem?.setOnMenuItemClickListener {
             showLogoutDialog()
             true
         }
@@ -543,6 +560,186 @@ class MainActivity : AppCompatActivity() {
     }
     
     /**
+     * Sincroniza todos los datos pendientes antes de actualizar
+     * Envía mensajes pendientes, reportes, asistencias, etc.
+     */
+    private suspend fun syncPendingData(): com.example.controloperador.data.api.Result<String> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val operatorCode = sessionManager.getOperatorCode()
+                if (operatorCode == null) {
+                    return@withContext com.example.controloperador.data.api.Result.Error("No hay sesión activa")
+                }
+                
+                val results = mutableListOf<String>()
+                
+                // 1. Sincronizar mensajes pendientes del chat
+                try {
+                    val database = AppDatabase.getDatabase(this@MainActivity)
+                    val chatRepository = ChatRepository(
+                        database.conversationDao(),
+                        database.chatMessageDao(),
+                        RetrofitClient.chatApiService
+                    )
+                    
+                    val conversation = chatRepository.getOrCreateConversation(operatorCode)
+                    val syncedMessages = chatRepository.retryPendingMessages(conversation.id, operatorCode)
+                    
+                    if (syncedMessages > 0) {
+                        results.add("✓ $syncedMessages mensajes sincronizados")
+                        android.util.Log.d("MainActivity", "✅ Sincronizados $syncedMessages mensajes pendientes")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("MainActivity", "❌ Error sincronizando mensajes: ${e.message}")
+                    results.add("⚠ Error en mensajes: ${e.message}")
+                }
+                
+                // 2. TODO: Aquí puedes agregar sincronización de otros datos
+                // Por ejemplo: reportes pendientes, asistencias, etc.
+                
+                val summary = if (results.isEmpty()) {
+                    "No hay datos pendientes"
+                } else {
+                    results.joinToString("\n")
+                }
+                
+                com.example.controloperador.data.api.Result.Success(summary)
+                
+            } catch (e: Exception) {
+                android.util.Log.e("MainActivity", "❌ Error en sincronización: ${e.message}")
+                com.example.controloperador.data.api.Result.Error("Error al sincronizar: ${e.message}")
+            }
+        }
+    }
+    
+    /**
+     * Sincroniza datos pendientes y luego instala la actualización
+     */
+    private fun syncAndInstallUpdate(apkFile: File) {
+        var progressDialog: AlertDialog? = null
+        
+        lifecycleScope.launch {
+            try {
+                // Mostrar diálogo de progreso
+                progressDialog = AlertDialog.Builder(this@MainActivity)
+                    .setTitle("Preparando Actualización")
+                    .setMessage("Sincronizando datos pendientes...\n\nEsto puede tardar unos segundos.")
+                    .setCancelable(false)
+                    .create()
+                progressDialog?.show()
+                
+                android.util.Log.d("MainActivity", "🔄 Iniciando sincronización pre-actualización")
+                
+                // Sincronizar datos pendientes
+                val syncResult = syncPendingData()
+                
+                // Cerrar diálogo de progreso
+                progressDialog?.dismiss()
+                
+                when (syncResult) {
+                    is com.example.controloperador.data.api.Result.Success -> {
+                        android.util.Log.d("MainActivity", "✅ Sincronización completada: ${syncResult.data}")
+                        
+                        // Mostrar resultado de sincronización
+                        val syncMessage = if (syncResult.data == "No hay datos pendientes") {
+                            "No había datos pendientes.\n\n¿Proceder con la instalación?"
+                        } else {
+                            "${syncResult.data}\n\n¿Proceder con la instalación?"
+                        }
+                        
+                        AlertDialog.Builder(this@MainActivity)
+                            .setTitle("✓ Sincronización Completa")
+                            .setMessage(syncMessage)
+                            .setPositiveButton("Instalar Ahora") { _, _ ->
+                                proceedWithInstallation(apkFile)
+                            }
+                            .setNegativeButton("Cancelar", null)
+                            .setIcon(android.R.drawable.ic_dialog_info)
+                            .show()
+                    }
+                    
+                    is com.example.controloperador.data.api.Result.Error -> {
+                        android.util.Log.e("MainActivity", "❌ Error en sincronización: ${syncResult.message}")
+                        
+                        // Mostrar error y preguntar si continuar de todos modos
+                        AlertDialog.Builder(this@MainActivity)
+                            .setTitle("⚠ Error de Sincronización")
+                            .setMessage("${syncResult.message}\n\n¿Deseas continuar con la actualización de todos modos?\n\nNota: Los datos pendientes podrían perderse.")
+                            .setPositiveButton("Continuar") { _, _ ->
+                                proceedWithInstallation(apkFile)
+                            }
+                            .setNegativeButton("Cancelar", null)
+                            .setIcon(android.R.drawable.ic_dialog_alert)
+                            .show()
+                    }
+                    
+                    is com.example.controloperador.data.api.Result.NetworkError -> {
+                        android.util.Log.w("MainActivity", "🌐 Sin conexión durante sincronización")
+                        
+                        AlertDialog.Builder(this@MainActivity)
+                            .setTitle("⚠ Sin Conexión")
+                            .setMessage("No hay conexión a internet para sincronizar.\n\n¿Deseas continuar con la actualización?\n\nNota: Los datos pendientes se sincronizarán después.")
+                            .setPositiveButton("Continuar") { _, _ ->
+                                proceedWithInstallation(apkFile)
+                            }
+                            .setNegativeButton("Cancelar", null)
+                            .setIcon(android.R.drawable.ic_dialog_alert)
+                            .show()
+                    }
+                    
+                    is com.example.controloperador.data.api.Result.Timeout -> {
+                        android.util.Log.w("MainActivity", "⏱️ Timeout durante sincronización")
+                        
+                        AlertDialog.Builder(this@MainActivity)
+                            .setTitle("⚠ Tiempo Agotado")
+                            .setMessage("La sincronización tardó demasiado.\n\n¿Deseas continuar con la actualización?")
+                            .setPositiveButton("Continuar") { _, _ ->
+                                proceedWithInstallation(apkFile)
+                            }
+                            .setNegativeButton("Cancelar", null)
+                            .setIcon(android.R.drawable.ic_dialog_alert)
+                            .show()
+                    }
+                }
+                
+            } catch (e: Exception) {
+                progressDialog?.dismiss()
+                android.util.Log.e("MainActivity", "❌ Error en sincronización e instalación", e)
+                
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle("Error")
+                    .setMessage("Error inesperado: ${e.message}\n\n¿Continuar con la instalación?")
+                    .setPositiveButton("Continuar") { _, _ ->
+                        proceedWithInstallation(apkFile)
+                    }
+                    .setNegativeButton("Cancelar", null)
+                    .show()
+            }
+        }
+    }
+    
+    /**
+     * Procede con la instalación del APK después de sincronización
+     */
+    private fun proceedWithInstallation(apkFile: File) {
+        if (ApkInstaller.isValidApk(this, apkFile)) {
+            // Verificar permiso antes de instalar
+            if (ApkInstaller.canInstallPackages(this)) {
+                ApkInstaller.installApk(this, apkFile)
+            } else {
+                // Mostrar diálogo explicativo antes de ir a configuración
+                showInstallPermissionDialog()
+            }
+        } else {
+            Toast.makeText(
+                this,
+                "Error: APK descargado está corrupto",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+    
+    /**
      * Verifica si hay actualizaciones descargadas pendientes de instalar
      * Muestra un diálogo al usuario para instalarlas
      */
@@ -569,17 +766,10 @@ class MainActivity : AppCompatActivity() {
                     // Mostrar diálogo
                     AlertDialog.Builder(this@MainActivity)
                         .setTitle("Actualización Disponible")
-                        .setMessage("Se descargó la versión $versionName.\n\n¿Deseas instalarla ahora?")
+                        .setMessage("Se descargó la versión $versionName.\n\n¿Deseas instalarla ahora?\n\n⚠️ Se sincronizarán todos los datos pendientes antes de actualizar.")
                         .setPositiveButton("Instalar") { _, _ ->
-                            if (ApkInstaller.isValidApk(this@MainActivity, apkFile)) {
-                                ApkInstaller.installApk(this@MainActivity, apkFile)
-                            } else {
-                                Toast.makeText(
-                                    this@MainActivity,
-                                    "Error: APK descargado está corrupto",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
+                            // Sincronizar datos antes de instalar
+                            syncAndInstallUpdate(apkFile)
                         }
                         .setNegativeButton("Más tarde", null)
                         .setIcon(android.R.drawable.stat_sys_download_done)
@@ -601,5 +791,27 @@ class MainActivity : AppCompatActivity() {
                 ).show()
             }
         }
+    }
+    
+    /**
+     * Muestra diálogo explicativo cuando falta permiso para instalar APKs
+     */
+    private fun showInstallPermissionDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Permiso Requerido")
+            .setMessage(
+                "Para instalar actualizaciones automáticamente, necesitas activar " +
+                "el permiso 'Instalar apps desconocidas'.\n\n" +
+                "Pasos:\n" +
+                "1. Se abrirá la configuración de la app\n" +
+                "2. Activa 'Permitir instalar apps desconocidas'\n" +
+                "3. Regresa e intenta instalar nuevamente"
+            )
+            .setPositiveButton("Ir a Configuración") { _, _ ->
+                ApkInstaller.openInstallPermissionSettings(this)
+            }
+            .setNegativeButton("Cancelar", null)
+            .setIcon(android.R.drawable.ic_dialog_alert)
+            .show()
     }
 }

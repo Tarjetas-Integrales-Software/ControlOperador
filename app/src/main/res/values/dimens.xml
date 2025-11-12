@@ -10,4 +10,8 @@
     <dimen name="button_margin">8dp</dimen>
     <dimen name="button_padding_horizontal">12dp</dimen>
     <dimen name="button_corner_radius">8dp</dimen>
+    
+    <!-- Dimensiones para íconos y corners -->
+    <dimen name="icon_size_small">18dp</dimen>
+    <dimen name="corner_radius_medium">12dp</dimen>
 </resources>

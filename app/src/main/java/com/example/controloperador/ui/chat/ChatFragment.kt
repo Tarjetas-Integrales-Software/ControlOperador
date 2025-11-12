@@ -1,5 +1,6 @@
 package com.example.controloperador.ui.chat
 
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -9,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -218,21 +220,41 @@ class ChatFragment : Fragment() {
             val button = MaterialButton(
                 requireContext(),
                 null,
-                com.google.android.material.R.attr.materialButtonOutlinedStyle
+                com.google.android.material.R.attr.materialButtonStyle
             ).apply {
                 text = response.mensaje
-                textSize = 13f
+                textSize = 14f
                 isAllCaps = false
                 setOnClickListener {
                     sendPredefinedResponse(response)
                 }
+                
+                // Estilo moderno con fondo blanco
+                backgroundTintList = ColorStateList.valueOf(
+                    ContextCompat.getColor(requireContext(), R.color.white)
+                )
+                setTextColor(
+                    ContextCompat.getColor(requireContext(), R.color.primary_dark)
+                )
+                iconTint = ColorStateList.valueOf(
+                    ContextCompat.getColor(requireContext(), R.color.accent_gold)
+                )
+                
+                // Agregar ícono de envío
+                icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_send)
+                iconGravity = MaterialButton.ICON_GRAVITY_END
+                iconSize = resources.getDimensionPixelSize(R.dimen.icon_size_small)
+                
+                // Elevación y corners
+                elevation = 4f
+                cornerRadius = resources.getDimensionPixelSize(R.dimen.corner_radius_medium)
                 
                 // Estilo del botón
                 val params = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
-                params.setMargins(0, 0, 0, 16)
+                params.setMargins(0, 0, 0, 12)
                 layoutParams = params
             }
             

@@ -29,6 +29,7 @@ import com.example.controloperador.data.OperatorRepository
 import com.example.controloperador.data.OperatorInfo
 import com.example.controloperador.data.repository.UpdateRepository
 import com.example.controloperador.data.database.AppDatabase
+import com.example.controloperador.data.database.AttendanceRepository
 import com.example.controloperador.data.database.chat.ChatRepository
 import com.example.controloperador.data.api.RetrofitClient
 import com.example.controloperador.utils.ApkInstaller
@@ -594,8 +595,33 @@ class MainActivity : AppCompatActivity() {
                     results.add("⚠ Error en mensajes: ${e.message}")
                 }
                 
-                // 2. TODO: Aquí puedes agregar sincronización de otros datos
-                // Por ejemplo: reportes pendientes, asistencias, etc.
+                // 2. Sincronizar reportes pendientes (enviado=0)
+                try {
+                    val database = AppDatabase.getDatabase(this@MainActivity)
+                    val attendanceRepository = AttendanceRepository(
+                        database.attendanceLogDao(),
+                        RetrofitClient.apiService
+                    )
+                    
+                    val (successful, failed) = attendanceRepository.syncUnsentReports()
+                    val totalReports = successful.toInt() + failed.toInt()
+                    
+                    if (totalReports > 0) {
+                        if (successful.toInt() > 0) {
+                            results.add("✓ $successful reportes sincronizados")
+                            android.util.Log.d("MainActivity", "✅ Sincronizados $successful reportes pendientes")
+                        }
+                        if (failed.toInt() > 0) {
+                            results.add("⚠ $failed reportes no se pudieron sincronizar")
+                            android.util.Log.w("MainActivity", "⚠️ No se pudieron sincronizar $failed reportes")
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("MainActivity", "❌ Error sincronizando reportes: ${e.message}")
+                    results.add("⚠ Error en reportes: ${e.message}")
+                }
+                
+                // 3. TODO: Aquí puedes agregar sincronización de otros datos si los hay
                 
                 val summary = if (results.isEmpty()) {
                     "No hay datos pendientes"

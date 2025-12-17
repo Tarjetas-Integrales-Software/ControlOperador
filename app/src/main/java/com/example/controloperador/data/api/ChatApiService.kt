@@ -5,7 +5,6 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
-import retrofit2.http.Query
 
 /**
  * Servicio API para chat entre operadores y analistas
@@ -23,15 +22,13 @@ interface ChatApiService {
     
     /**
      * Obtiene los mensajes del día actual para un operador
-     * GET /api/chat/messages/today?operator_code=12345&last_id=abc123
+     * POST /api/chat/messages/today (cambiado a POST por problemas con query params en producción)
      * 
-     * @param operatorCode Código del operador (5 dígitos)
-     * @param lastId ID del último mensaje recibido (para paginación incremental)
+     * @param request Contiene operator_code y last_id
      */
-    @GET("secomsa/chat/messages/today")
+    @POST("secomsa/chat/messages/today")
     suspend fun getTodayMessages(
-        @Query("operator_code") operatorCode: String,
-        @Query("last_id") lastId: String? = null
+        @Body request: GetMessagesRequest
     ): Response<TodayMessagesResponse>
     
     /**

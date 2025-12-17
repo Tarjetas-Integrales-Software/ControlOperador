@@ -159,3 +159,27 @@ data class ReporteError(
     val id: Long,  // ID local del reporte que falló
     val message: String  // Mensaje de error
 )
+
+/**
+ * Respuesta de mensajes de voz del día
+ */
+data class VoiceMessagesResponse(
+    val voice_messages: List<VoiceMessageData>,
+    val count: Int,
+    val fecha_consulta: String
+)
+
+/**
+ * Mensaje de voz del día (desde backend)
+ */
+data class VoiceMessageData(
+    val id: Long,
+    val titulo: String,
+    val descripcion: String?,
+    val archivo_url: String,
+    val duracion: Int?,  // Duración en segundos
+    val fecha: String,  // Formato: "2025-11-13"
+    val hora: String,   // Formato: "08:30:00"
+    val created_at: String,
+    val updated_at: String
+)

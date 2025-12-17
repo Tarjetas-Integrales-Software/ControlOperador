@@ -24,13 +24,14 @@ android {
         applicationId = "com.example.controloperador"
         minSdk = 29
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.0.7"
+        versionCode = 8
+        versionName = "1.0.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
         // URL base para producción (usada en debug y release)
-        buildConfigField("String", "BASE_URL", "\"https://backtransportistas.tarjetasintegrales.mx:806/api/v1/\"")
+        // buildConfigField("String", "BASE_URL", "\"https://backtransportistas.tarjetasintegrales.mx:806/api/v1/\"")
+        buildConfigField("String", "BASE_URL", "\"http://172.16.22.78:8000/api/v1/\"")
         
         // Configuración para auto-update desde GitHub
         buildConfigField("String", "GITHUB_REPO_OWNER", "\"Tarjetas-Integrales-Software\"")

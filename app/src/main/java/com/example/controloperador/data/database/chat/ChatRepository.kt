@@ -237,14 +237,32 @@ class ChatRepository(
                 
                 Log.d(TAG, "🔍 Fetching new messages for operator: $operatorCode")
                 Log.d(TAG, "📡 Last synced server ID: $lastServerId")
-                Log.d(TAG, "🌐 Calling API: GET secomsa/chat/messages/today")
-                Log.d(TAG, "📝 Parameters: operator_code=$operatorCode, last_id=$lastServerId")
+                Log.d(TAG, "🌐 Calling API: POST secomsa/chat/messages/today")
+                Log.d(TAG, "📝 Body: operator_code='$operatorCode', last_id='$lastServerId'")
+                Log.d(TAG, "🔗 Base URL: ${com.example.controloperador.BuildConfig.BASE_URL}")
                 
-                // Llamar a la API con query parameters
-                val response = chatApiService.getTodayMessages(operatorCode, lastServerId)
+                // Crear request body
+                val request = com.example.controloperador.data.api.model.chat.GetMessagesRequest(
+                    operatorCode = operatorCode,
+                    lastId = lastServerId
+                )
+                
+                // Llamar a la API con POST body
+                val response = try {
+                    chatApiService.getTodayMessages(request)
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ Exception calling API: ${e::class.simpleName} - ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
                 
                 Log.d(TAG, "📥 API Response code: ${response.code()}")
                 Log.d(TAG, "📦 API Response successful: ${response.isSuccessful}")
+                
+                if (!response.isSuccessful) {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e(TAG, "❌ API Error response: $errorBody")
+                }
                 
                 if (response.isSuccessful && response.body() != null) {
                     val body = response.body()!!

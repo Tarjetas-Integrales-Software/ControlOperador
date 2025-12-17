@@ -2,10 +2,24 @@
 <network-security-config>
     <!-- Permitir CLEARTEXT (HTTP) para desarrollo -->
     <domain-config cleartextTrafficPermitted="true">
-        <!-- Servidor de desarrollo local -->
+        <!-- Servidor de desarrollo local (todas las subredes posibles) -->
+        <domain includeSubdomains="true">172.16.22.78</domain>
+        <domain includeSubdomains="true">172.16.24.15</domain>
+        <domain includeSubdomains="true">172.16.22.0</domain>
         <domain includeSubdomains="true">172.16.20.10</domain>
         <domain includeSubdomains="true">10.0.2.2</domain>
         <domain includeSubdomains="true">localhost</domain>
+        <!-- Para ngrok (si se usa) -->
+        <domain includeSubdomains="true">ngrok-free.app</domain>
+    </domain-config>
+    
+    <!-- Configuración específica para servidor de producción -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">backtransportistas.tarjetasintegrales.mx</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
     </domain-config>
     
     <!-- Configuración base: Solo HTTPS en producción -->

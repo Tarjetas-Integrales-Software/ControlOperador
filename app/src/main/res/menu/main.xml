@@ -7,6 +7,7 @@
         android:icon="@android:drawable/stat_sys_download_done"
         android:orderInCategory="50"
         android:title="Instalar Actualización"
+        android:visible="false"
         app:showAsAction="ifRoom" />
     
     <item

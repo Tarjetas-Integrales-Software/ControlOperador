@@ -322,6 +322,13 @@ class MainActivity : AppCompatActivity() {
         return true
     }
 
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        // Mostrar el item "Instalar Actualización" solo si hay un APK descargado
+        val installUpdateItem = menu.findItem(R.id.action_install_update)
+        installUpdateItem?.isVisible = hasPendingUpdate()
+        return super.onPrepareOptionsMenu(menu)
+    }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_install_update -> {
@@ -350,6 +357,8 @@ class MainActivity : AppCompatActivity() {
         }
         // Re-aplicar modo kiosko cuando la app regresa al primer plano
         enableKioskMode()
+        // Actualizar menú para mostrar/ocultar item de actualización
+        invalidateOptionsMenu()
     }
     
     override fun onPause() {
@@ -762,6 +771,25 @@ class MainActivity : AppCompatActivity() {
                 "Error: APK descargado está corrupto",
                 Toast.LENGTH_LONG
             ).show()
+        }
+    }
+    
+    /**
+     * Verifica si hay una actualización descargada disponible
+     * @return true si hay un APK pendiente de instalar
+     */
+    private fun hasPendingUpdate(): Boolean {
+        return try {
+            val updateRepository = UpdateRepository(this)
+            val updatesDir = updateRepository.getUpdatesDirectory()
+            
+            // Verificar si existe algún APK en el directorio de actualizaciones
+            updatesDir.listFiles()?.any { file ->
+                file.name.endsWith(".apk") && file.exists()
+            } ?: false
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Error verificando actualización pendiente", e)
+            false
         }
     }
     

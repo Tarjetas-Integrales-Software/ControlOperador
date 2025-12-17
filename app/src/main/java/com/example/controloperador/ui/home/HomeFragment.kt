@@ -18,6 +18,9 @@ import com.example.controloperador.R
 import com.example.controloperador.databinding.FragmentHomeBinding
 import com.example.controloperador.ui.login.SessionManager
 import com.example.controloperador.ui.chat.ChatViewModel
+import com.example.controloperador.ui.voice.VoiceMessagesViewModel
+import com.example.controloperador.data.api.model.VoiceMessageDetail
+import com.example.controloperador.utils.AudioPlayerHelper
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
 import java.text.SimpleDateFormat
@@ -34,6 +37,13 @@ class HomeFragment : Fragment() {
     
     // ViewModel compartido con ChatFragment para sincronizar conversaciones
     private val chatViewModel: ChatViewModel by activityViewModels()
+    
+    // ViewModel para mensajes de voz
+    private lateinit var voiceViewModel: VoiceMessagesViewModel
+    
+    // AudioPlayer para reproducir audios en el home
+    private var audioPlayer: AudioPlayerHelper? = null
+    private var currentPlayingAudioId: String? = null
     
     // Adaptador para el chat integrado (solo en landscape)
     private var chatAdapter: com.example.controloperador.ui.chat.ChatAdapter? = null
@@ -65,17 +75,24 @@ class HomeFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         val homeViewModel = ViewModelProvider(this)[HomeViewModel::class.java]
+        voiceViewModel = ViewModelProvider(this)[VoiceMessagesViewModel::class.java]
 
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         val root: View = binding.root
         
         sessionManager = SessionManager(requireContext())
         
+        // Inicializar AudioPlayer
+        audioPlayer = AudioPlayerHelper(requireContext())
+        setupAudioPlayer()
+        
         setupWelcomeMessage()
         startRealtimeTimer() // Iniciar timer en tiempo real
         setupIntegratedChat() // Configurar chat integrado en landscape
         observeChatViewModel() // Observar mensajes compartidos con ChatFragment
+        observeVoiceViewModel() // Observar mensajes de voz
         loadMessagesSummary()
+        loadVoiceMessages() // Cargar audios recientes
         setupClickListeners()
 
         return root
@@ -300,19 +317,203 @@ class HomeFragment : Fragment() {
         }
     }
     
-    private fun displayRecentVoiceMessages() {
-        // TODO: Implementar con nuevo sistema de mensajes de voz
-        val voiceMessagesContainer = binding.root.findViewById<android.widget.LinearLayout>(R.id.voiceMessagesContainer)
+    /**
+     * Configura los listeners del AudioPlayer
+     */
+    private fun setupAudioPlayer() {
+        audioPlayer?.apply {
+            setOnCompletionListener { audioId ->
+                android.util.Log.d("HomeFragment", "Audio completed: $audioId")
+                currentPlayingAudioId = null
+                // Actualizar UI del botón que terminó de reproducir
+                updatePlayButtonsState()
+            }
+            
+            setOnErrorListener { audioId, error ->
+                android.util.Log.e("HomeFragment", "Audio error: $audioId - $error")
+                Toast.makeText(requireContext(), "Error al reproducir audio", Toast.LENGTH_SHORT).show()
+                currentPlayingAudioId = null
+                updatePlayButtonsState()
+            }
+            
+            setOnPreparedListener { audioId, duration ->
+                android.util.Log.d("HomeFragment", "Audio prepared: $audioId (${duration}s)")
+            }
+        }
+    }
+    
+    /**
+     * Observa cambios en VoiceMessagesViewModel
+     */
+    private fun observeVoiceViewModel() {
+        // Observar mensajes de voz
+        voiceViewModel.messages.observe(viewLifecycleOwner) { messages ->
+            displayRecentVoiceMessages(messages)
+        }
+        
+        // Observar contador de mensajes sin reproducir
+        voiceViewModel.unreadCount.observe(viewLifecycleOwner) { count ->
+            updateVoiceUnreadBadge(count)
+        }
+        
+        // Observar errores
+        voiceViewModel.error.observe(viewLifecycleOwner) { error ->
+            error?.let {
+                android.util.Log.e("HomeFragment", "Voice error: $it")
+            }
+        }
+    }
+    
+    /**
+     * Carga los mensajes de voz del operador
+     */
+    private fun loadVoiceMessages() {
+        val operatorCode = sessionManager.getOperatorCode() ?: return
+        voiceViewModel.loadConversations(operatorCode)
+    }
+    
+    /**
+     * Muestra los últimos 5 mensajes de voz recibidos
+     */
+    private fun displayRecentVoiceMessages(allMessages: List<VoiceMessageDetail> = emptyList()) {
+        val voiceMessagesContainer = binding.root.findViewById<LinearLayout>(R.id.voiceMessagesContainer)
         voiceMessagesContainer?.let { container ->
             container.removeAllViews()
-        
-            val emptyView = TextView(requireContext()).apply {
-                text = "No hay mensajes de voz"
-                textSize = 14f
-                setTextColor(resources.getColor(R.color.text_secondary, null))
-                setPadding(0, 16, 0, 16)
+            
+            if (allMessages.isEmpty()) {
+                val emptyView = TextView(requireContext()).apply {
+                    text = "No hay mensajes de voz"
+                    textSize = 14f
+                    setTextColor(resources.getColor(R.color.text_secondary, null))
+                    setPadding(0, 16, 0, 16)
+                }
+                container.addView(emptyView)
+                return
             }
-            container.addView(emptyView)
+            
+            // Tomar los últimos 5 audios (más recientes primero)
+            val recentMessages = allMessages
+                .sortedByDescending { it.createdAt } // Más recientes primero
+                .take(5)
+            
+            recentMessages.forEach { message ->
+                val itemView = layoutInflater.inflate(R.layout.item_voice_message_home, container, false)
+                
+                // Configurar datos del audio
+                itemView.findViewById<TextView>(R.id.audioDate)?.text = getRelativeTimeFromString(message.createdAt)
+                itemView.findViewById<TextView>(R.id.audioDuration)?.text = message.formattedDuration
+                
+                // Mostrar indicador de no leído
+                val unreadIndicator = itemView.findViewById<View>(R.id.unreadIndicator)
+                unreadIndicator?.visibility = if (!message.isRead) View.VISIBLE else View.GONE
+                
+                // Configurar botón de reproducción
+                val playButton = itemView.findViewById<MaterialButton>(R.id.playButton)
+                playButton?.tag = message.id.toString() // Guardar ID en el tag
+                playButton?.setOnClickListener {
+                    handleAudioPlayPause(message, playButton)
+                }
+                
+                // Actualizar icono inicial
+                updatePlayButtonIcon(playButton, message.id.toString())
+                
+                container.addView(itemView)
+            }
+        }
+    }
+    
+    /**
+     * Maneja play/pause de un audio
+     */
+    private fun handleAudioPlayPause(message: VoiceMessageDetail, button: MaterialButton) {
+        val player = audioPlayer ?: return
+        val messageId = message.id.toString()
+        
+        if (currentPlayingAudioId == messageId && player.isPlaying()) {
+            // Pausar audio actual
+            player.pause()
+            updatePlayButtonIcon(button, messageId)
+        } else if (currentPlayingAudioId == messageId && !player.isPlaying()) {
+            // Reanudar audio pausado
+            player.resume()
+            updatePlayButtonIcon(button, messageId)
+        } else {
+            // Reproducir nuevo audio
+            player.stop() // Detener cualquier audio anterior
+            currentPlayingAudioId = messageId
+            updatePlayButtonsState() // Actualizar todos los botones
+            
+            val started = player.playAudioFromPath(message.audioUrl, messageId)
+            if (!started) {
+                Toast.makeText(
+                    requireContext(),
+                    "No se pudo reproducir el audio",
+                    Toast.LENGTH_SHORT
+                ).show()
+                currentPlayingAudioId = null
+                updatePlayButtonIcon(button, messageId)
+            }
+        }
+    }
+    
+    /**
+     * Actualiza el icono de un botón de reproducción
+     */
+    private fun updatePlayButtonIcon(button: MaterialButton, audioId: String) {
+        val isPlaying = currentPlayingAudioId == audioId && audioPlayer?.isPlaying() == true
+        button.setIconResource(
+            if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play
+        )
+    }
+    
+    /**
+     * Actualiza el estado de todos los botones de reproducción
+     */
+    private fun updatePlayButtonsState() {
+        val container = binding.root.findViewById<LinearLayout>(R.id.voiceMessagesContainer)
+        container?.let {
+            for (i in 0 until it.childCount) {
+                val itemView = it.getChildAt(i)
+                val button = itemView.findViewById<MaterialButton>(R.id.playButton)
+                val audioId = button?.tag as? String
+                if (audioId != null) {
+                    updatePlayButtonIcon(button, audioId)
+                }
+            }
+        }
+    }
+    
+    /**
+     * Actualiza el badge de mensajes de voz sin reproducir
+     */
+    private fun updateVoiceUnreadBadge(count: Int) {
+        val badge = binding.root.findViewById<TextView>(R.id.unplayedVoiceBadge)
+        badge?.let {
+            if (count > 0) {
+                it.visibility = View.VISIBLE
+                it.text = "$count sin reproducir"
+            } else {
+                it.visibility = View.GONE
+            }
+        }
+    }
+    
+    /**
+     * Convierte fecha ISO string a tiempo relativo
+     */
+    private fun getRelativeTimeFromString(dateString: String): String {
+        return try {
+            // Parsear fecha ISO 8601 del backend
+            val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+            val date = format.parse(dateString.split(".")[0]) // Remover milisegundos
+            if (date != null) {
+                getRelativeTime(date)
+            } else {
+                "Reciente"
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("HomeFragment", "Error parsing date: $dateString", e)
+            "Reciente"
         }
     }
     
@@ -377,6 +578,8 @@ class HomeFragment : Fragment() {
         super.onDestroyView()
         handler.removeCallbacks(timerRunnable) // Detener el timer
         chatSyncHandler.removeCallbacks(chatSyncRunnable) // Detener sync de chat
+        audioPlayer?.release() // Liberar MediaPlayer
+        audioPlayer = null
         _binding = null
     }
 }

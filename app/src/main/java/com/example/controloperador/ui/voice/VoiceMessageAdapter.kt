@@ -7,15 +7,18 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.controloperador.R
-import com.example.controloperador.data.model.VoiceMessage
+import com.example.controloperador.data.api.model.VoiceMessageData
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 class VoiceMessageAdapter(
-    private val onPlayClick: (VoiceMessage) -> Unit
+    private val onPlayClick: (VoiceMessageData) -> Unit
 ) : RecyclerView.Adapter<VoiceMessageAdapter.VoiceMessageViewHolder>() {
 
-    private var messages: List<VoiceMessage> = emptyList()
+    private var messages: List<VoiceMessageData> = emptyList()
     private var playingMessageId: String? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VoiceMessageViewHolder {
@@ -26,13 +29,13 @@ class VoiceMessageAdapter(
 
     override fun onBindViewHolder(holder: VoiceMessageViewHolder, position: Int) {
         val message = messages[position]
-        val isPlaying = message.id == playingMessageId
+        val isPlaying = message.id.toString() == playingMessageId
         holder.bind(message, isPlaying, onPlayClick)
     }
 
     override fun getItemCount(): Int = messages.size
 
-    fun updateMessages(newMessages: List<VoiceMessage>) {
+    fun updateMessages(newMessages: List<VoiceMessageData>) {
         messages = newMessages
         notifyDataSetChanged()
     }
@@ -43,7 +46,7 @@ class VoiceMessageAdapter(
         
         // Actualizar ambos items (el que estaba reproduciéndose y el nuevo)
         messages.forEachIndexed { index, message ->
-            if (message.id == oldPlayingId || message.id == messageId) {
+            if (message.id.toString() == oldPlayingId || message.id.toString() == messageId) {
                 notifyItemChanged(index)
             }
         }
@@ -57,18 +60,19 @@ class VoiceMessageAdapter(
         private val playButton: FloatingActionButton = itemView.findViewById(R.id.playButton)
 
         fun bind(
-            message: VoiceMessage,
+            message: VoiceMessageData,
             isPlaying: Boolean,
-            onPlayClick: (VoiceMessage) -> Unit
+            onPlayClick: (VoiceMessageData) -> Unit
         ) {
-            // Mostrar/ocultar indicador de no reproducido
-            unplayedIndicator.visibility = if (message.isPlayed) View.GONE else View.VISIBLE
+            // Ocultar indicador de no reproducido (ya que ahora viene del servidor)
+            unplayedIndicator.visibility = View.GONE
             
-            // Formatear duración
-            voiceDuration.text = formatDuration(message.duration)
+            // Formatear duración (si está disponible)
+            voiceDuration.text = message.duracion?.let { formatDuration(it) } ?: "0:00"
             
-            // Formatear timestamp
-            voiceTimestamp.text = getRelativeTime(message.timestamp.time)
+            // Formatear timestamp desde la fecha y hora del mensaje
+            val timestamp = parseDateTime(message.fecha, message.hora)
+            voiceTimestamp.text = getRelativeTime(timestamp)
             
             // Cambiar icono según estado
             playButton.setImageResource(
@@ -85,6 +89,16 @@ class VoiceMessageAdapter(
             val minutes = seconds / 60
             val secs = seconds % 60
             return String.format("%d:%02d", minutes, secs)
+        }
+        
+        private fun parseDateTime(fecha: String, hora: String): Long {
+            return try {
+                val dateTimeString = "$fecha $hora"
+                val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                format.parse(dateTimeString)?.time ?: System.currentTimeMillis()
+            } catch (e: Exception) {
+                System.currentTimeMillis()
+            }
         }
 
         private fun getRelativeTime(timestamp: Long): String {

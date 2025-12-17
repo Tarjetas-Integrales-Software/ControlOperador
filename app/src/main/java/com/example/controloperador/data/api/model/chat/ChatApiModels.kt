@@ -50,14 +50,21 @@ data class SendMessageRequest(
 
 /**
  * Request para obtener mensajes del día
+ * Usado tanto en GET (query params) como en POST (body)
  */
-data class TodayMessagesRequest(
+data class GetMessagesRequest(
     @SerializedName("operator_code")
     val operatorCode: String,
     
     @SerializedName("last_id")
     val lastId: String? = null
 )
+
+/**
+ * @deprecated Usar GetMessagesRequest
+ */
+@Deprecated("Use GetMessagesRequest instead", ReplaceWith("GetMessagesRequest"))
+typealias TodayMessagesRequest = GetMessagesRequest
 
 /**
  * Response al enviar un mensaje

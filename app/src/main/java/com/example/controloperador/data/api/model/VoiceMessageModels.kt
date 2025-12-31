@@ -77,7 +77,7 @@ data class VoiceMessageDetail(
     val senderType: String, // Siempre "ANALISTA" para el operador
     
     @SerializedName("audio_path")
-    val audioPath: String,
+    val audioPath: String? = null, // Opcional - el backend no siempre lo envía
     
     @SerializedName("audio_url")
     val audioUrl: String,
@@ -205,4 +205,25 @@ data class MarkReadResponse(
 data class MarkReadData(
     @SerializedName("marked_count")
     val markedCount: Int
+)
+
+// ============= REQUEST BODIES =============
+
+/**
+ * Request body para obtener conversaciones
+ */
+data class GetConversationsRequest(
+    @SerializedName("operator_code")
+    val operatorCode: String
+)
+
+/**
+ * Request body para marcar mensajes como leídos
+ */
+data class MarkAsReadRequest(
+    @SerializedName("operator_code")
+    val operatorCode: String,
+    
+    @SerializedName("conversation_id")
+    val conversationId: String
 )

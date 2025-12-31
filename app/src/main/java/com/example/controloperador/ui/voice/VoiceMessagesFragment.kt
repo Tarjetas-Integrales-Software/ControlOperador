@@ -1,6 +1,8 @@
 package com.example.controloperador.ui.voice
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -38,6 +40,16 @@ class VoiceMessagesFragment : Fragment() {
     
     // Token de autenticación
     private var operatorCode: String? = null
+    
+    // Handler para sincronizar mensajes de voz cada 30 segundos
+    private val voiceSyncHandler = Handler(Looper.getMainLooper())
+    private val voiceSyncRunnable = object : Runnable {
+        override fun run() {
+            android.util.Log.d("VoiceMessagesFragment", "🎙️ Auto-sync voice messages triggered (30s interval)")
+            loadConversations() // Recargar conversaciones
+            voiceSyncHandler.postDelayed(this, 30_000) // Repetir cada 30 segundos
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -232,6 +244,7 @@ class VoiceMessagesFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        voiceSyncHandler.removeCallbacks(voiceSyncRunnable) // Detener sync de mensajes de voz
         audioPlayer?.release() // IMPORTANTE: Liberar MediaPlayer
         audioPlayer = null
         _binding = null
@@ -239,15 +252,25 @@ class VoiceMessagesFragment : Fragment() {
     
     override fun onPause() {
         super.onPause()
+        android.util.Log.d("VoiceMessagesFragment", "🔴 Fragment paused - Stopping auto-sync")
+        
         // Pausar reproducción cuando el fragment no esté visible
         audioPlayer?.pause()
+        
+        // Detener polling cuando el fragment no está visible
+        voiceSyncHandler.removeCallbacks(voiceSyncRunnable)
     }
     
     override fun onResume() {
         super.onResume()
-        // Recargar conversaciones al volver al fragment
+        android.util.Log.d("VoiceMessagesFragment", "🟢 Fragment resumed - Starting auto-sync")
+        
+        // Recargar conversaciones inmediatamente al volver al fragment
         operatorCode?.let { code ->
             viewModel.refresh(code)
         }
+        
+        // Iniciar polling automático cada 30 segundos
+        voiceSyncHandler.post(voiceSyncRunnable)
     }
 }

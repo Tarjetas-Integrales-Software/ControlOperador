@@ -30,8 +30,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
         // URL base para producción (usada en debug y release)
-        // buildConfigField("String", "BASE_URL", "\"https://backtransportistas.tarjetasintegrales.mx:806/api/v1/\"")
-        buildConfigField("String", "BASE_URL", "\"http://172.16.22.78:8000/api/v1/\"")
+        buildConfigField("String", "BASE_URL", "\"https://backtransportistas.tarjetasintegrales.mx:806/api/v1/\"")
+        // buildConfigField("String", "BASE_URL", "\"http://172.16.22.66:8000/api/v1/\"")
         
         // Configuración para auto-update desde GitHub
         buildConfigField("String", "GITHUB_REPO_OWNER", "\"Tarjetas-Integrales-Software\"")

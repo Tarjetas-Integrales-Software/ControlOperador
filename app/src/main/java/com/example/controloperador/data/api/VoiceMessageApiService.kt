@@ -18,7 +18,7 @@ interface VoiceMessageApiService {
     /**
      * Obtener todas las conversaciones con mensajes de voz del operador
      * 
-     * GET /api/v1/secomsa/voice-messages/operator/conversations
+     * POST /api/v1/secomsa/voice-messages/operator/conversations
      * 
      * Retorna una lista de conversaciones que incluyen:
      * - ID de conversación
@@ -27,12 +27,12 @@ interface VoiceMessageApiService {
      * - Contador de mensajes sin leer
      * - Total de mensajes
      * 
-     * @param operatorCode Código del operador (5 dígitos)
+     * @param request Body con el operator_code
      * @return Response con lista de conversaciones
      */
-    @GET("secomsa/voice-messages/operator/conversations")
+    @POST("secomsa/voice-messages/operator/conversations")
     suspend fun getConversations(
-        @Query("operator_code") operatorCode: String
+        @Body request: GetConversationsRequest
     ): Response<ConversationsResponse>
     
     /**
@@ -65,13 +65,11 @@ interface VoiceMessageApiService {
      * Actualiza el estado de los mensajes no leídos a leídos.
      * El backend registra la fecha/hora en que se marcaron como leídos.
      * 
-     * @param operatorCode Código del operador (5 dígitos)
-     * @param conversationId ID de la conversación a marcar como leída
+     * @param request Body con operator_code y conversation_id
      * @return Response con cantidad de mensajes marcados
      */
     @POST("secomsa/voice-messages/operator/mark-read")
     suspend fun markAsRead(
-        @Query("operator_code") operatorCode: String,
-        @Query("conversation_id") conversationId: String
+        @Body request: MarkAsReadRequest
     ): Response<MarkReadResponse>
 }

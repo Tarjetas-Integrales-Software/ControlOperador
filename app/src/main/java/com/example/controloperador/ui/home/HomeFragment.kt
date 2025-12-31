@@ -68,6 +68,16 @@ class HomeFragment : Fragment() {
             chatSyncHandler.postDelayed(this, 30_000) // Repetir cada 30 segundos
         }
     }
+    
+    // Handler para sincronizar mensajes de voz cada 30 segundos
+    private val voiceSyncHandler = Handler(Looper.getMainLooper())
+    private val voiceSyncRunnable = object : Runnable {
+        override fun run() {
+            android.util.Log.d("HomeFragment", "🎙️ Auto-sync voice messages triggered (30s interval)")
+            loadVoiceMessages() // Recargar mensajes de voz
+            voiceSyncHandler.postDelayed(this, 30_000) // Repetir cada 30 segundos
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -559,25 +569,35 @@ class HomeFragment : Fragment() {
         super.onResume()
         android.util.Log.d("HomeFragment", "🟢 Fragment resumed - Starting auto-sync")
         
-        // Sincronizar inmediatamente al abrir
+        // Sincronizar chat inmediatamente al abrir
         chatViewModel.syncMessagesNow()
         
-        // Iniciar polling automático cada 30 segundos
+        // Sincronizar mensajes de voz inmediatamente al abrir
+        loadVoiceMessages()
+        
+        // Iniciar polling automático para chat cada 30 segundos
         chatSyncHandler.post(chatSyncRunnable)
+        
+        // Iniciar polling automático para mensajes de voz cada 30 segundos
+        voiceSyncHandler.post(voiceSyncRunnable)
     }
     
     override fun onPause() {
         super.onPause()
         android.util.Log.d("HomeFragment", "🔴 Fragment paused - Stopping auto-sync")
         
-        // Detener polling cuando el fragment no está visible
+        // Detener polling de chat cuando el fragment no está visible
         chatSyncHandler.removeCallbacks(chatSyncRunnable)
+        
+        // Detener polling de mensajes de voz cuando el fragment no está visible
+        voiceSyncHandler.removeCallbacks(voiceSyncRunnable)
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         handler.removeCallbacks(timerRunnable) // Detener el timer
         chatSyncHandler.removeCallbacks(chatSyncRunnable) // Detener sync de chat
+        voiceSyncHandler.removeCallbacks(voiceSyncRunnable) // Detener sync de mensajes de voz
         audioPlayer?.release() // Liberar MediaPlayer
         audioPlayer = null
         _binding = null

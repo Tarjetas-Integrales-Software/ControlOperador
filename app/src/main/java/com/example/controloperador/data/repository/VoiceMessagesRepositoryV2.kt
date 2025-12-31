@@ -25,17 +25,26 @@ class VoiceMessagesRepositoryV2(
     
     companion object {
         /**
-         * WORKAROUND: Corrige IPs incorrectas en URLs de audio del backend
-         * El backend tiene APP_URL configurado con IP vieja en .env
-         * TODO: Backend debe corregir APP_URL=http://172.16.22.78:8000 en su .env
+         * WORKAROUND: Corrige URLs incorrectas en audios del backend
+         * El backend tiene APP_URL mal configurado en .env (localhost, IPs viejas, etc.)
+         * TODO: Backend debe corregir APP_URL en su .env para usar URL de producción
          */
         private fun fixAudioUrl(url: String, correctBaseUrl: String): String {
-            return if (url.contains("172.16.24.15") || url.contains("172.16.20.10")) {
-                // Reemplazar IP vieja con la correcta
-                url.replace("http://172.16.24.15:8000", correctBaseUrl)
-                   .replace("http://172.16.20.10:8000", correctBaseUrl)
-            } else {
-                url
+            return when {
+                // Localhost (error común en desarrollo del backend)
+                url.contains("localhost") || url.contains("127.0.0.1") -> {
+                    url.replace("http://localhost", correctBaseUrl)
+                       .replace("http://127.0.0.1", correctBaseUrl)
+                       .replace("http://localhost:80", correctBaseUrl)
+                       .replace("http://127.0.0.1:80", correctBaseUrl)
+                }
+                // IPs viejas de desarrollo
+                url.contains("172.16.24.15") || url.contains("172.16.20.10") -> {
+                    url.replace("http://172.16.24.15:8000", correctBaseUrl)
+                       .replace("http://172.16.20.10:8000", correctBaseUrl)
+                }
+                // URL ya es correcta
+                else -> url
             }
         }
     }
@@ -61,7 +70,8 @@ class VoiceMessagesRepositoryV2(
             try {
                 Log.d(TAG, "🔍 Obteniendo conversaciones de mensajes de voz para operador: $operatorCode")
                 
-                val response = api.getConversations(operatorCode)
+                val request = GetConversationsRequest(operatorCode)
+                val response = api.getConversations(request)
                 
                 when {
                     response.isSuccessful -> {
@@ -141,7 +151,8 @@ class VoiceMessagesRepositoryV2(
                 
                 // Según la documentación, los mensajes vienen en la primera llamada
                 // Este endpoint NO existe en el backend, usamos getConversations
-                val response = api.getConversations(operatorCode)
+                val request = GetConversationsRequest(operatorCode)
+                val response = api.getConversations(request)
                 
                 when {
                     response.isSuccessful -> {
@@ -214,7 +225,8 @@ class VoiceMessagesRepositoryV2(
             try {
                 Log.d(TAG, "✓ Marcando mensajes como leídos: $conversationId para operador: $operatorCode")
                 
-                val response = api.markAsRead(operatorCode, conversationId)
+                val request = MarkAsReadRequest(operatorCode, conversationId)
+                val response = api.markAsRead(request)
                 
                 when {
                     response.isSuccessful -> {

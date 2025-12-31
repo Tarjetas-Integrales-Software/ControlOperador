@@ -4,6 +4,7 @@
     <domain-config cleartextTrafficPermitted="true">
         <!-- Servidor de desarrollo local (todas las subredes posibles) -->
         <domain includeSubdomains="true">172.16.22.78</domain>
+        <domain includeSubdomains="true">172.16.22.66</domain>
         <domain includeSubdomains="true">172.16.24.15</domain>
         <domain includeSubdomains="true">172.16.22.0</domain>
         <domain includeSubdomains="true">172.16.20.10</domain>

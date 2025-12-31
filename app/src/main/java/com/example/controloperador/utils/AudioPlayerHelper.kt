@@ -70,7 +70,13 @@ class AudioPlayerHelper(private val context: Context) {
             stop() // Detener reproducción anterior
             
             mediaPlayer = MediaPlayer().apply {
-                setDataSource(context, Uri.parse(audioPath))
+                // Para URLs HTTP, usar setDataSource(String) directamente
+                // Para files locales, usar setDataSource(Context, Uri)
+                if (audioPath.startsWith("http://") || audioPath.startsWith("https://")) {
+                    setDataSource(audioPath)
+                } else {
+                    setDataSource(context, Uri.parse(audioPath))
+                }
                 
                 setOnPreparedListener {
                     val duration = this.duration / 1000
@@ -215,7 +221,12 @@ class AudioPlayerHelper(private val context: Context) {
         var tempPlayer: MediaPlayer? = null
         try {
             tempPlayer = MediaPlayer().apply {
-                setDataSource(context, Uri.parse(audioPath))
+                // Para URLs HTTP, usar setDataSource(String) directamente
+                if (audioPath.startsWith("http://") || audioPath.startsWith("https://")) {
+                    setDataSource(audioPath)
+                } else {
+                    setDataSource(context, Uri.parse(audioPath))
+                }
                 prepare()
             }
             duration = tempPlayer?.duration?.div(1000) ?: 0

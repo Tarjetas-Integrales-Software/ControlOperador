@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Directorio interno para APKs descargados -->
+    <files-path
+        name="apk_updates"
+        path="updates/" />
+    
+    <!-- Caché para descargas temporales -->
+    <cache-path
+        name="apk_cache"
+        path="updates/" />
+</paths>

@@ -20,6 +20,14 @@
     <style name="Theme.ControlOperador.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
+        <!-- Configuración para pantalla completa inmersiva (Kiosk Mode) -->
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+        <!-- Colores transparentes para las barras del sistema -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 
     <style name="Theme.ControlOperador.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />

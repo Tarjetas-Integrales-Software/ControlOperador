@@ -5,6 +5,7 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.Query
 
 /**
  * Interfaz del servicio API REST
@@ -47,4 +48,21 @@ interface ApiService {
      */
     @POST("secomsa/messages/predefined")
     suspend fun getPredefinedMessages(@Body request: LoginRequest): Response<ApiResponse<PredefinedMessagesResponse>>
+    
+    /**
+     * Enviar reportes de entrada/salida al servidor
+     * POST /api/v1/secomsa/reportes
+     */
+    @POST("secomsa/reportes")
+    suspend fun sendReportes(@Body request: ReportesRequest): Response<ApiResponse<ReportesResponse>>
+    
+    /**
+     * Obtener mensajes de voz del día actual
+     * GET /api/v1/secomsa/voice-messages
+     */
+    @GET("secomsa/voice-messages")
+    suspend fun getVoiceMessages(
+        @Query("operator_code") operatorCode: String,
+        @Query("last_id") lastId: Int = 0
+    ): Response<ApiResponse<VoiceMessagesResponse>>
 }

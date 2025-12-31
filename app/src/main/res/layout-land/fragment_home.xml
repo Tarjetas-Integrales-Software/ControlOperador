@@ -7,6 +7,8 @@
     android:layout_height="match_parent"
     android:fillViewport="true"
     android:background="@color/login_background"
+    android:fitsSystemWindows="false"
+    android:clipToPadding="false"
     tools:context=".ui.home.HomeFragment">
 
 
@@ -14,7 +16,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="16dp"
+        android:fitsSystemWindows="false"
+        android:clipToPadding="false">
 
         <!-- Header con timer en tiempo real -->
         <LinearLayout
@@ -137,7 +141,7 @@
                         android:layout_weight="1"
                         android:background="@color/login_background"
                         android:clipToPadding="false"
-                        android:padding="12dp"
+                        android:padding="12dp" 
                         tools:listitem="@layout/item_text_message_sent" />
 
                     <!-- Botón para enviar respuesta predeterminada -->
@@ -172,7 +176,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:orientation="vertical"
-                    android:padding="14dp">
+                    android:padding="14dp"
+                    android:weightSum="1">
 
                     <!-- Header -->
                     <LinearLayout
@@ -207,12 +212,21 @@
                             tools:visibility="visible" />
                     </LinearLayout>
 
-                    <!-- Recent Voice Messages List -->
-                    <LinearLayout
-                        android:id="@+id/voiceMessagesContainer"
+                    <!-- Recent Voice Messages List con scroll vertical -->
+                    <ScrollView
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical" />
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:fillViewport="false"
+                        android:scrollbars="vertical"
+                        android:fadeScrollbars="false">
+                        
+                        <LinearLayout
+                            android:id="@+id/voiceMessagesContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical" />
+                    </ScrollView>
 
                     <!-- View All Button -->
                     <com.google.android.material.button.MaterialButton

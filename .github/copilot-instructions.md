@@ -29,6 +29,39 @@ ControlOperador is an Android application for a transport company (empresa de tr
 - `mobile_navigation.xml`: Navigation graph with login as startDestination
 - `activity_main_drawer.xml`: Drawer menu with logout option
 
+## Design System
+
+### Material Design 3 (M3) Components
+All visual changes and new UI components **MUST** follow Material Design 3 guidelines:
+- **Reference Documentation**: https://m3.material.io/components
+- **Component Library**: Use Material 3 components from `com.google.android.material` package
+- **Common Components**:
+  - **Buttons**: Filled, Outlined, Text, Elevated, Tonal variants
+  - **Cards**: Elevated, Filled, Outlined
+  - **Dialogs**: Alert dialogs, Full-screen dialogs
+  - **Text fields**: Filled, Outlined variants with Material styles
+  - **Navigation**: Navigation drawer, Bottom navigation, Navigation rail
+  - **Lists**: Material list items with proper spacing and typography
+  - **App bars**: Top app bar (toolbar), Bottom app bar
+  - **FAB**: Standard, Extended, Small, Large variants
+  - **Chips**: Assist, Filter, Input, Suggestion
+  - **Progress indicators**: Linear, Circular
+  - **Snackbars**: Action-based feedback
+  - **Switches, Checkboxes, Radio buttons**: Material themed
+
+**Design Principles**:
+- Follow M3 color system with dynamic color support where applicable
+- Use Material Typography scale (Display, Headline, Title, Body, Label)
+- Apply proper elevation and shadows as per M3 guidelines
+- Implement state layers (hover, focus, pressed) for interactive elements
+- Use Material motion and transitions for animations
+
+**Transport Company Theme Adaptation**:
+- Primary: `#1A2332` (Dark blue-grey)
+- Accent: `#F39C12` (Gold/Orange)
+- Secondary: `#3498DB` (Bright blue)
+- Apply these colors to M3 components using theme attributes
+
 ## Code Conventions
 
 ### View Binding Pattern

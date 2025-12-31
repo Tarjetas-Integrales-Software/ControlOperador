@@ -33,14 +33,31 @@ object RetrofitClient {
      */
     private val okHttpClient: OkHttpClient by lazy {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BODY
+            } else {
+                HttpLoggingInterceptor.Level.BASIC  // En producción solo headers y status
+            }
+        }
+        
+        // Interceptor para agregar headers comunes
+        val headerInterceptor = okhttp3.Interceptor { chain ->
+            val original = chain.request()
+            val request = original.newBuilder()
+                .header("Accept", "application/json")
+                .header("Content-Type", "application/json")
+                .method(original.method, original.body)
+                .build()
+            chain.proceed(request)
         }
         
         OkHttpClient.Builder()
-            .addInterceptor(loggingInterceptor)
+            .addInterceptor(headerInterceptor)  // Headers primero
+            .addInterceptor(loggingInterceptor)  // Logging después
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)  // Reintentar en caso de fallo
             .build()
     }
     
@@ -69,5 +86,40 @@ object RetrofitClient {
      */
     val apiService: ApiService by lazy {
         retrofit.create(ApiService::class.java)
+    }
+    
+    /**
+     * Servicio API para chat
+     */
+    val chatApiService: ChatApiService by lazy {
+        retrofit.create(ChatApiService::class.java)
+    }
+    
+    /**
+     * Servicio API para mensajes de voz
+     * Endpoints específicos para recibir y gestionar mensajes de voz del operador
+     */
+    val voiceMessageApiService: VoiceMessageApiService by lazy {
+        retrofit.create(VoiceMessageApiService::class.java)
+    }
+    
+    /**
+     * Cliente Retrofit específico para GitHub API
+     * Base URL: https://api.github.com/
+     */
+    private val githubRetrofit: Retrofit by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://api.github.com/")
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create(gson))
+            .build()
+    }
+    
+    /**
+     * Servicio API para GitHub Releases
+     * Permite verificar actualizaciones de la app
+     */
+    val githubApiService: GitHubApiService by lazy {
+        githubRetrofit.create(GitHubApiService::class.java)
     }
 }

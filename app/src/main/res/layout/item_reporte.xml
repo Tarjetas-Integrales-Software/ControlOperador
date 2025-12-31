@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:background="?attr/selectableItemBackground">
+
+    <!-- Nombre Completo -->
+    <TextView
+        android:id="@+id/tvNombreCompleto"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="2"
+        android:textSize="13sp"
+        android:textColor="@color/primary_dark"
+        android:ellipsize="end"
+        android:maxLines="2"
+        tools:text="Juan Pérez García" />
+
+    <!-- Fecha de Entrada -->
+    <TextView
+        android:id="@+id/tvFechaEntrada"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.5"
+        android:textSize="12sp"
+        android:textColor="@color/primary_dark"
+        android:gravity="center"
+        android:maxLines="2"
+        tools:text="29/10/2025\n08:30" />
+
+    <!-- Fecha de Salida -->
+    <TextView
+        android:id="@+id/tvFechaSalida"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.5"
+        android:textSize="12sp"
+        android:textColor="@color/primary_dark"
+        android:gravity="center"
+        android:maxLines="2"
+        tools:text="29/10/2025\n17:45" />
+
+    <!-- Tiempo Operando -->
+    <TextView
+        android:id="@+id/tvTiempoOperando"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textSize="13sp"
+        android:textColor="@color/accent_gold"
+        android:textStyle="bold"
+        android:gravity="center"
+        tools:text="9.25h" />
+
+    <!-- Estado de Sincronización -->
+    <ImageView
+        android:id="@+id/ivEstadoSync"
+        android:layout_width="0dp"
+        android:layout_height="24dp"
+        android:layout_weight="0.5"
+        android:layout_gravity="center_vertical"
+        android:src="@android:drawable/ic_menu_upload"
+        android:tint="@color/accent_blue"
+        tools:src="@android:drawable/ic_menu_upload"
+        tools:tint="@color/accent_gold" />
+
+</LinearLayout>

@@ -3,108 +3,81 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp"
     android:background="@android:color/white">
 
-    <!-- Título -->
-    <TextView
+    <!-- Header con título y botón cerrar -->
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/select_predefined_response"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:textColor="@color/primary_dark"
-        android:gravity="center"
-        android:paddingBottom="16dp" />
+        android:background="@color/primary_dark"
+        android:padding="16dp"
+        android:elevation="4dp">
 
-    <!-- Respuesta 1: Falla mecánica -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/responseMecanica"
+        <TextView
+            android:id="@+id/titleText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@string/select_predefined_response"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/closeButton"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <ImageButton
+            android:id="@+id/closeButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:tint="@android:color/white"
+            android:contentDescription="@android:string/cancel"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- ScrollView para el contenido -->
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/response_falla_mecanica"
-        android:textAlignment="textStart"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:layout_marginBottom="8dp"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        app:cornerRadius="8dp" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
 
-    <!-- Respuesta 2: Neumático ponchado -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/responseNeumatico"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/response_neumatico_ponchado"
-        android:textAlignment="textStart"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:layout_marginBottom="8dp"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        app:cornerRadius="8dp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
 
-    <!-- Respuesta 3: Siniestro -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/responseSiniestro"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/response_siniestro"
-        android:textAlignment="textStart"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:layout_marginBottom="8dp"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        app:cornerRadius="8dp" />
+            <!-- Contenedor dinámico para botones de respuestas predeterminadas -->
+            <LinearLayout
+                android:id="@+id/responsesContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+                <!-- Los botones se crean dinámicamente desde HomeFragment -->
+            </LinearLayout>
 
-    <!-- Respuesta 4: Tráfico detenido -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/responseTrafico"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/response_trafico_detenido"
-        android:textAlignment="textStart"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:layout_marginBottom="8dp"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        app:cornerRadius="8dp" />
+        </LinearLayout>
+    </ScrollView>
 
-    <!-- Respuesta 5: Desviación -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/responseDesviacion"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/response_desviacion"
-        android:textAlignment="textStart"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:layout_marginBottom="8dp"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        app:cornerRadius="8dp" />
-
-    <!-- Respuesta 6: Falla en equipo de prepago -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/responsePrepago"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/response_falla_prepago"
-        android:textAlignment="textStart"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:layout_marginBottom="8dp"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        app:cornerRadius="8dp" />
-
-    <!-- Botón cancelar -->
+    <!-- Botón cancelar fijo en la parte inferior -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/cancelButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_margin="16dp"
         android:text="@android:string/cancel"
-        android:layout_marginTop="8dp"
-        style="@style/Widget.MaterialComponents.Button.TextButton"
-        app:cornerRadius="8dp" />
+        android:textAllCaps="false"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        app:cornerRadius="8dp"
+        app:strokeColor="@color/primary_dark"
+        app:strokeWidth="2dp" />
 
 </LinearLayout>

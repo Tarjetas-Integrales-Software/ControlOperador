@@ -3,6 +3,9 @@
     <!-- Permitir CLEARTEXT (HTTP) para desarrollo -->
     <domain-config cleartextTrafficPermitted="true">
         <!-- Servidor de desarrollo local (todas las subredes posibles) -->
+        <domain includeSubdomains="true">172.16.22.58</domain>
+        <domain includeSubdomains="true">172.16.22.52</domain>
+        <domain includeSubdomains="true">172.16.24.11</domain>
         <domain includeSubdomains="true">172.16.22.78</domain>
         <domain includeSubdomains="true">172.16.22.66</domain>
         <domain includeSubdomains="true">172.16.24.15</domain>

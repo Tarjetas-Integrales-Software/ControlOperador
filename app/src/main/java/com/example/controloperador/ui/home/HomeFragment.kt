@@ -70,6 +70,8 @@ class HomeFragment : Fragment() {
     }
     
     // Handler para sincronizar mensajes de voz cada 30 segundos
+    // DISABLED: Panel ahora muestra respuestas predefinidas en lugar de audios
+    /*
     private val voiceSyncHandler = Handler(Looper.getMainLooper())
     private val voiceSyncRunnable = object : Runnable {
         override fun run() {
@@ -78,6 +80,7 @@ class HomeFragment : Fragment() {
             voiceSyncHandler.postDelayed(this, 30_000) // Repetir cada 30 segundos
         }
     }
+    */
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -100,9 +103,9 @@ class HomeFragment : Fragment() {
         startRealtimeTimer() // Iniciar timer en tiempo real
         setupIntegratedChat() // Configurar chat integrado en landscape
         observeChatViewModel() // Observar mensajes compartidos con ChatFragment
-        observeVoiceViewModel() // Observar mensajes de voz
+        // observeVoiceViewModel() // DISABLED: Panel ahora muestra respuestas predefinidas
         loadMessagesSummary()
-        loadVoiceMessages() // Cargar audios recientes
+        // loadVoiceMessages() // DISABLED: Panel ahora muestra respuestas predefinidas
         setupClickListeners()
 
         return root
@@ -150,9 +153,9 @@ class HomeFragment : Fragment() {
     private fun setupIntegratedChat() {
         // Verificar si existe el RecyclerView (solo en landscape)
         val messagesRecyclerView = binding.root.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.messagesRecyclerView)
-        val responseButton = binding.root.findViewById<com.google.android.material.button.MaterialButton>(R.id.responseButton)
+        val responsesContainer = binding.root.findViewById<LinearLayout>(R.id.voiceMessagesContainer)
         
-        if (messagesRecyclerView != null && responseButton != null) {
+        if (messagesRecyclerView != null && responsesContainer != null) {
             // Estamos en landscape, configurar chat integrado
             val operatorCode = sessionManager.getOperatorCode() ?: return
             chatAdapter = com.example.controloperador.ui.chat.ChatAdapter(operatorCode)
@@ -182,9 +185,68 @@ class HomeFragment : Fragment() {
                 }
             }
             
-            // Configurar botón de respuestas predeterminadas
-            responseButton.setOnClickListener {
-                showPredefinedResponsesDialog()
+            // Cargar respuestas predefinidas en el panel (siempre visible)
+            loadPredefinedResponsesPanel(responsesContainer)
+        }
+    }
+    
+    /**
+     * Carga las respuestas predefinidas directamente en el panel (siempre visible)
+     * Se actualiza dinámicamente cuando el ViewModel carga las respuestas del backend
+     */
+    private fun loadPredefinedResponsesPanel(container: LinearLayout) {
+        // Cargar respuestas desde servidor
+        chatViewModel.loadPredefinedResponses()
+        
+        // Observar cambios en las respuestas predefinidas
+        chatViewModel.predefinedResponses.observe(viewLifecycleOwner) { responses ->
+            if (responses.isNullOrEmpty()) {
+                // Mostrar mensaje de carga o vacío
+                container.removeAllViews()
+                val emptyText = TextView(requireContext()).apply {
+                    text = "Cargando respuestas..."
+                    textSize = 14f
+                    setTextColor(resources.getColor(R.color.text_secondary, null))
+                    gravity = android.view.Gravity.CENTER
+                    setPadding(16, 16, 16, 16)
+                }
+                container.addView(emptyText)
+                return@observe
+            }
+            
+            // Limpiar contenedor y agregar botones dinámicamente
+            container.removeAllViews()
+            
+            responses.forEach { response ->
+                val button = MaterialButton(
+                    requireContext(),
+                    null,
+                    com.google.android.material.R.attr.materialButtonOutlinedStyle
+                ).apply {
+                    id = View.generateViewId()
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        bottomMargin = resources.getDimensionPixelSize(R.dimen.button_margin)
+                    }
+                    text = response.mensaje // Texto de la respuesta
+                    textAlignment = View.TEXT_ALIGNMENT_TEXT_START
+                    textSize = 12f // Más pequeño para caber en panel lateral
+                    setPadding(
+                        resources.getDimensionPixelSize(R.dimen.button_padding_horizontal),
+                        paddingTop,
+                        resources.getDimensionPixelSize(R.dimen.button_padding_horizontal),
+                        paddingBottom
+                    )
+                    cornerRadius = resources.getDimensionPixelSize(R.dimen.button_corner_radius)
+                    
+                    setOnClickListener {
+                        sendPredefinedResponse(response.mensaje)
+                    }
+                }
+                
+                container.addView(button)
             }
         }
     }
@@ -192,6 +254,7 @@ class HomeFragment : Fragment() {
     /**
      * Muestra el Bottom Sheet con respuestas predefinidas (Material Design 3)
      * Las opciones se cargan dinámicamente desde el backend
+     * DEPRECATED: Usar loadPredefinedResponsesPanel() en landscape
      */
     private fun showPredefinedResponsesDialog() {
         // Cargar respuestas desde servidor
@@ -279,6 +342,21 @@ class HomeFragment : Fragment() {
      * Agrega el mensaje a la conversación compartida entre HomeFragment y ChatFragment
      */
     private fun sendPredefinedResponse(response: String) {
+        android.util.Log.d("HomeFragment", "📤 sendPredefinedResponse called with: $response")
+        
+        // Verificar que el chat esté inicializado
+        if (chatViewModel.conversation.value == null) {
+            android.util.Log.e("HomeFragment", "❌ Chat not initialized! Cannot send message")
+            Toast.makeText(
+                requireContext(),
+                "Error: Chat no inicializado",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+        
+        android.util.Log.d("HomeFragment", "✅ Chat initialized, sending message...")
+        
         // Enviar mensaje usando ChatViewModel (automáticamente sincroniza con backend)
         chatViewModel.sendMessage(response)
         
@@ -354,7 +432,10 @@ class HomeFragment : Fragment() {
     
     /**
      * Observa cambios en VoiceMessagesViewModel
+     * DISABLED: Panel voiceMessagesContainer ahora muestra respuestas predefinidas
+     * en lugar de mensajes de voz. Los audios se consultan en VoiceFragment.
      */
+    /*
     private fun observeVoiceViewModel() {
         // Observar mensajes de voz
         voiceViewModel.messages.observe(viewLifecycleOwner) { messages ->
@@ -373,18 +454,24 @@ class HomeFragment : Fragment() {
             }
         }
     }
+    */
     
     /**
      * Carga los mensajes de voz del operador
+     * DISABLED: Panel ahora muestra respuestas predefinidas en lugar de audios
      */
+    /*
     private fun loadVoiceMessages() {
         val operatorCode = sessionManager.getOperatorCode() ?: return
         voiceViewModel.loadConversations(operatorCode)
     }
+    */
     
     /**
      * Muestra los últimos 5 mensajes de voz recibidos
+     * DISABLED: Panel ahora muestra respuestas predefinidas en lugar de audios
      */
+    /*
     private fun displayRecentVoiceMessages(allMessages: List<VoiceMessageDetail> = emptyList()) {
         val voiceMessagesContainer = binding.root.findViewById<LinearLayout>(R.id.voiceMessagesContainer)
         voiceMessagesContainer?.let { container ->
@@ -431,6 +518,7 @@ class HomeFragment : Fragment() {
             }
         }
     }
+    */
     
     /**
      * Maneja play/pause de un audio
@@ -572,14 +660,14 @@ class HomeFragment : Fragment() {
         // Sincronizar chat inmediatamente al abrir
         chatViewModel.syncMessagesNow()
         
-        // Sincronizar mensajes de voz inmediatamente al abrir
-        loadVoiceMessages()
+        // DISABLED: Panel ahora muestra respuestas predefinidas
+        // loadVoiceMessages()
         
         // Iniciar polling automático para chat cada 30 segundos
         chatSyncHandler.post(chatSyncRunnable)
         
-        // Iniciar polling automático para mensajes de voz cada 30 segundos
-        voiceSyncHandler.post(voiceSyncRunnable)
+        // DISABLED: Panel ahora muestra respuestas predefinidas
+        // voiceSyncHandler.post(voiceSyncRunnable)
     }
     
     override fun onPause() {
@@ -589,17 +677,18 @@ class HomeFragment : Fragment() {
         // Detener polling de chat cuando el fragment no está visible
         chatSyncHandler.removeCallbacks(chatSyncRunnable)
         
-        // Detener polling de mensajes de voz cuando el fragment no está visible
-        voiceSyncHandler.removeCallbacks(voiceSyncRunnable)
+        // DISABLED: Panel ahora muestra respuestas predefinidas
+        // voiceSyncHandler.removeCallbacks(voiceSyncRunnable)
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         handler.removeCallbacks(timerRunnable) // Detener el timer
         chatSyncHandler.removeCallbacks(chatSyncRunnable) // Detener sync de chat
-        voiceSyncHandler.removeCallbacks(voiceSyncRunnable) // Detener sync de mensajes de voz
+        // voiceSyncHandler.removeCallbacks(voiceSyncRunnable) // DISABLED: Panel ahora muestra respuestas predefinidas
         audioPlayer?.release() // Liberar MediaPlayer
         audioPlayer = null
+        chatAdapter?.onDestroy() // Liberar MediaPlayer del chat adapter
         _binding = null
     }
 }

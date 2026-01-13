@@ -23,7 +23,7 @@ import com.example.controloperador.data.database.chat.ConversationDao
         Conversation::class,
         ChatMessage::class
     ],
-    version = 2, // Incrementado por nuevas tablas de chat
+    version = 4, // Incrementado: agregados campos de audio (message_type, audio_url, duration, file_size)
     exportSchema = false
 )
 @TypeConverters(Converters::class) // Un solo TypeConverter consolidado

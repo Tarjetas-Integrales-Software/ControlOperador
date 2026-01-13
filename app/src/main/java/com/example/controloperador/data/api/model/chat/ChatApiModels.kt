@@ -87,20 +87,39 @@ data class MessageData(
     @SerializedName("conversation_id")
     val conversationId: String,
     
+    @SerializedName("message_type")
+    val messageType: String? = "TEXT", // "TEXT" o "VOICE" - por defecto TEXT para compatibilidad
+    
     @SerializedName("content")
-    val content: String,
+    val content: String?, // Nullable porque puede ser null en mensajes de voz
     
     @SerializedName("sender_type")
     val senderType: String, // "OPERADOR" o "ANALISTA"
     
     @SerializedName("sender_id")
-    val senderId: String,
+    val senderId: String?, // Nullable porque puede ser null cuando es ANALISTA
     
     @SerializedName("created_at")
     val createdAt: String, // ISO 8601 UTC
     
     @SerializedName("read_at")
-    val readAt: String? = null
+    val readAt: String? = null,
+    
+    // Campos específicos para mensajes de voz (VOICE)
+    @SerializedName("audio_url")
+    val audioUrl: String? = null,
+    
+    @SerializedName("audio_path")
+    val audioPath: String? = null,
+    
+    @SerializedName("duration")
+    val duration: Int? = null, // Duración en segundos
+    
+    @SerializedName("file_size")
+    val fileSize: Long? = null,
+    
+    @SerializedName("mime_type")
+    val mimeType: String? = null
 )
 
 /**

@@ -199,4 +199,16 @@ interface ChatMessageDao {
         LIMIT 1
     """)
     suspend fun getLastSyncedServerId(conversationId: String): String?
+    
+    /**
+     * Verifica si ya existe un mensaje con el serverId dado
+     * Devuelve true si existe, false si no
+     */
+    @Query("""
+        SELECT EXISTS(
+            SELECT 1 FROM chat_messages 
+            WHERE server_id = :serverId
+        )
+    """)
+    suspend fun messageExists(serverId: String): Boolean
 }

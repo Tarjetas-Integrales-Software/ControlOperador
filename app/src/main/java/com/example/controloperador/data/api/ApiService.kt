@@ -57,7 +57,51 @@ interface ApiService {
     suspend fun sendReportes(@Body request: ReportesRequest): Response<ApiResponse<ReportesResponse>>
     
     /**
-     * Obtener mensajes de voz del día actual
+     * ============================================
+     * CHAT UNIFICADO - Mensajes de Texto y Voz
+     * ============================================
+     */
+    
+    /**
+     * Obtener todos los mensajes del operador (texto y voz unificados)
+     * GET /api/v1/secomsa/chat/operador/messages?operator_code=12345
+     */
+    @GET("secomsa/chat/operador/messages")
+    suspend fun getUnifiedMessages(
+        @Query("operator_code") operatorCode: String
+    ): Response<ApiResponse<OperatorMessagesResponse>>
+    
+    /**
+     * Obtener solo mensajes sin leer
+     * GET /api/v1/secomsa/chat/operador/unread?operator_code=12345
+     */
+    @GET("secomsa/chat/operador/unread")
+    suspend fun getUnreadMessages(
+        @Query("operator_code") operatorCode: String
+    ): Response<ApiResponse<UnreadMessagesResponse>>
+    
+    /**
+     * Marcar mensajes como leídos
+     * POST /api/v1/secomsa/chat/operador/mark-read
+     */
+    @POST("secomsa/chat/operador/mark-read")
+    suspend fun markMessagesAsRead(@Body request: OperatorMarkReadRequest): Response<ApiResponse<OperatorMarkReadResponse>>
+    
+    /**
+     * Enviar respuesta del operador (mensaje de texto)
+     * POST /api/v1/secomsa/chat/operador/send
+     */
+    @POST("secomsa/chat/operador/send")
+    suspend fun sendOperatorResponse(@Body request: SendResponseRequest): Response<ApiResponse<UnifiedMessage>>
+    
+    /**
+     * ============================================
+     * LEGACY - Mantener compatibilidad
+     * ============================================
+     */
+    
+    /**
+     * Obtener mensajes de voz del día actual (LEGACY)
      * GET /api/v1/secomsa/voice-messages
      */
     @GET("secomsa/voice-messages")

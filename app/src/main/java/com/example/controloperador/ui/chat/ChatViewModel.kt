@@ -102,9 +102,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
      * Envía un mensaje de texto
      */
     fun sendMessage(content: String) {
-        val operatorCode = _operatorCode.value ?: return
-        if (content.isBlank()) return
+        Log.d(TAG, "📤 sendMessage called with content: '$content'")
         
+        val operatorCode = _operatorCode.value
+        Log.d(TAG, "   Operator code: $operatorCode")
+        
+        if (operatorCode == null) {
+            Log.e(TAG, "❌ Cannot send message: operatorCode is null")
+            return
+        }
+        
+        if (content.isBlank()) {
+            Log.e(TAG, "❌ Cannot send message: content is blank")
+            return
+        }
+        
+        Log.d(TAG, "✅ Sending message to repository...")
         _sendMessageState.value = SendMessageState.Sending
         
         viewModelScope.launch {
@@ -113,9 +126,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 content = content.trim()
             )
             
+            Log.d(TAG, "📥 Repository result: $result")
+            
             when (result) {
                 is Result.Success -> {
-                    Log.d(TAG, "Message sent successfully")
+                    Log.d(TAG, "✅ Message sent successfully")
                     _sendMessageState.value = SendMessageState.Success
                     
                     // Resetear a Idle después de un momento
@@ -124,7 +139,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 
                 is Result.Error -> {
-                    Log.e(TAG, "Error sending message: ${result.message}")
+                    Log.e(TAG, "❌ Error sending message: ${result.message}")
                     _sendMessageState.value = SendMessageState.Error(result.message)
                     
                     // Resetear después de mostrar error
@@ -134,7 +149,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 
                 else -> {
                     // NetworkError o Timeout - el mensaje queda como PENDING
-                    Log.w(TAG, "Message saved as pending, will retry later")
+                    Log.w(TAG, "⚠️ Message saved as pending, will retry later")
                     _sendMessageState.value = SendMessageState.Success
                     
                     kotlinx.coroutines.delay(500)

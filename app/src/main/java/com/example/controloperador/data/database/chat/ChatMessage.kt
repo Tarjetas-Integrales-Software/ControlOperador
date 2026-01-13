@@ -39,16 +39,40 @@ data class ChatMessage(
     @ColumnInfo(name = "content")
     val content: String,
     
+    /**
+     * Tipo de mensaje: TEXT o VOICE
+     */
+    @ColumnInfo(name = "message_type")
+    val messageType: String = "TEXT", // "TEXT" o "VOICE"
+    
+    /**
+     * URL del audio (solo para VOICE)
+     */
+    @ColumnInfo(name = "audio_url")
+    val audioUrl: String? = null,
+    
+    /**
+     * Duración del audio en segundos (solo para VOICE)
+     */
+    @ColumnInfo(name = "duration")
+    val duration: Int? = null,
+    
+    /**
+     * Tamaño del archivo en bytes (solo para VOICE)
+     */
+    @ColumnInfo(name = "file_size")
+    val fileSize: Long? = null,
+    
     @ColumnInfo(name = "sender_type")
     val senderType: SenderType,
     
     /**
      * ID del remitente:
      * - Si es OPERADOR: código de 5 dígitos (ej: "12345")
-     * - Si es ANALISTA: users.id del backend (ej: "42")
+     * - Si es ANALISTA: users.id del backend (ej: "42") o null si no está disponible
      */
     @ColumnInfo(name = "sender_id")
-    val senderId: String,
+    val senderId: String?,
     
     /**
      * Nombre del remitente para mostrar en UI:
@@ -119,6 +143,29 @@ data class ChatMessage(
      * Verifica si el mensaje fue leído
      */
     fun isRead(): Boolean = readAt != null
+    
+    /**
+     * Verifica si el mensaje es de voz
+     */
+    fun isVoiceMessage(): Boolean = messageType == "VOICE"
+    
+    /**
+     * Verifica si el mensaje es de texto
+     */
+    fun isTextMessage(): Boolean = messageType == "TEXT"
+    
+    /**
+     * Obtiene la duración formateada del audio (MM:SS)
+     */
+    fun getFormattedDuration(): String {
+        return if (duration != null && duration > 0) {
+            val minutes = duration / 60
+            val seconds = duration % 60
+            String.format("%d:%02d", minutes, seconds)
+        } else {
+            "0:00"
+        }
+    }
 }
 
 /**

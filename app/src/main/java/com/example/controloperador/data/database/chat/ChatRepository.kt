@@ -170,7 +170,7 @@ class ChatRepository(
                 operatorCode = operatorCode,
                 content = message.content,
                 senderType = message.senderType.name, // "OPERADOR" o "ANALISTA"
-                senderId = message.senderId, // operator_code para operador
+                senderId = message.senderId ?: operatorCode, // Usar operatorCode si senderId es null
                 isPredefinedResponse = message.isPredefinedResponse,
                 predefinedResponseId = message.predefinedResponseId,
                 localId = message.id
@@ -275,27 +275,48 @@ class ChatRepository(
                     if (body.success && body.data != null) {
                         Log.d(TAG, "📝 Messages in response: ${body.data.messages.size}")
                         
-                        val newMessages = body.data.messages.map { messageData ->
-                            Log.d(TAG, "   - Message: ${messageData.id} | ${messageData.senderType} | ${messageData.content}")
-                            mapApiMessageToLocal(messageData, conversationId, operatorCode)
+                        // Filtrar solo mensajes válidos:
+                        // - Mensajes de TEXTO deben tener content no vacío
+                        // - Mensajes de VOICE son válidos aunque content sea null (tienen audio_url)
+                        val validMessages = body.data.messages.filter { message ->
+                            val isTextWithContent = message.messageType == "TEXT" && 
+                                                   message.content != null && 
+                                                   message.content.isNotBlank()
+                            val isVoiceMessage = message.messageType == "VOICE"
+                            
+                            isTextWithContent || isVoiceMessage
+                        }
+                        Log.d(TAG, "📝 Valid messages (TEXT with content or VOICE): ${validMessages.size}")
+                        
+                        // Filtrar mensajes que YA EXISTEN en la base de datos (verificar por serverId)
+                        val newMessagesToInsert = mutableListOf<ChatMessage>()
+                        for (messageData in validMessages) {
+                            val exists = chatMessageDao.messageExists(messageData.id)
+                            if (!exists) {
+                                val messagePreview = if (messageData.messageType == "VOICE") "🎙️ Audio ${messageData.duration}s" else messageData.content
+                                Log.d(TAG, "   ✅ New message: ${messageData.id} | ${messageData.senderType} | $messagePreview")
+                                newMessagesToInsert.add(mapApiMessageToLocal(messageData, conversationId, operatorCode))
+                            } else {
+                                Log.d(TAG, "   ⏭️ Skipping duplicate: ${messageData.id}")
+                            }
                         }
                         
-                        if (newMessages.isNotEmpty()) {
-                            // Insertar nuevos mensajes
-                            chatMessageDao.insertMessages(newMessages)
-                            Log.d(TAG, "💾 Inserted ${newMessages.size} messages into Room")
+                        if (newMessagesToInsert.isNotEmpty()) {
+                            // Insertar solo mensajes nuevos (sin duplicados)
+                            chatMessageDao.insertMessages(newMessagesToInsert)
+                            Log.d(TAG, "💾 Inserted ${newMessagesToInsert.size} NEW messages into Room (skipped ${validMessages.size - newMessagesToInsert.size} duplicates)")
                             
                             // Marcar mensajes de analista como no leídos (read_at = null)
                             // Se marcarán como leídos cuando el usuario los vea
                             
                             // Actualizar timestamp de conversación
-                            val lastMessage = newMessages.maxByOrNull { it.createdAt }
+                            val lastMessage = newMessagesToInsert.maxByOrNull { it.createdAt }
                             lastMessage?.let {
                                 conversationDao.updateLastMessageTimestamp(conversationId, it.createdAt.time)
                             }
                             
                             // Actualizar conteo de no leídos
-                            val unreadFromAnalyst = newMessages.count { 
+                            val unreadFromAnalyst = newMessagesToInsert.count { 
                                 it.senderType == SenderType.ANALISTA && it.readAt == null 
                             }
                             
@@ -305,12 +326,12 @@ class ChatRepository(
                                 }
                             }
                             
-                            Log.d(TAG, "✅ Fetched ${newMessages.size} new messages ($unreadFromAnalyst unread)")
+                            Log.d(TAG, "✅ Fetched ${newMessagesToInsert.size} new messages ($unreadFromAnalyst unread)")
                         } else {
-                            Log.d(TAG, "ℹ️ No new messages to insert")
+                            Log.d(TAG, "ℹ️ No new messages to insert (all were duplicates or empty)")
                         }
                         
-                        Result.Success(newMessages.size)
+                        Result.Success(newMessagesToInsert.size)
                     } else {
                         Log.e(TAG, "❌ API returned success=false: ${body.message}")
                         Result.Error(body.message)
@@ -481,10 +502,31 @@ class ChatRepository(
             SenderType.ANALISTA
         }
         
+        // Generar contenido apropiado según el tipo de mensaje
+        val messageContent = when (apiMessage.messageType) {
+            "VOICE" -> {
+                // Para mensajes de voz, mostrar un placeholder descriptivo
+                val durationText = apiMessage.duration?.let { "${it}s" } ?: "duración desconocida"
+                "🎙️ Mensaje de voz ($durationText)"
+            }
+            "TEXT" -> {
+                // Para mensajes de texto, usar el content (o vacío si es null)
+                apiMessage.content ?: ""
+            }
+            else -> {
+                // Fallback para tipos desconocidos
+                apiMessage.content ?: ""
+            }
+        }
+        
         return ChatMessage(
             id = UUID.randomUUID().toString(), // ID local único
             conversationId = conversationId,
-            content = apiMessage.content,
+            content = messageContent, // Contenido procesado según el tipo
+            messageType = apiMessage.messageType ?: "TEXT", // Tipo de mensaje
+            audioUrl = apiMessage.audioUrl, // URL del audio (solo para VOICE)
+            duration = apiMessage.duration, // Duración en segundos (solo para VOICE)
+            fileSize = apiMessage.fileSize, // Tamaño del archivo (solo para VOICE)
             senderType = senderType,
             senderId = apiMessage.senderId,
             senderName = if (senderType == SenderType.OPERADOR) "Yo" else "Soporte",

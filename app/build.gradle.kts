@@ -29,9 +29,14 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
-        // URL base para producción (usada en debug y release)
-        buildConfigField("String", "BASE_URL", "\"https://backtransportistas.tarjetasintegrales.mx:806/api/v1/\"")
-        // buildConfigField("String", "BASE_URL", "\"http://172.16.22.66:8000/api/v1/\"")
+        // URL base para desarrollo y producción
+        // IP DE RED LOCAL: Debe estar en la misma subred que el emulador/dispositivo
+        // IPs disponibles: 172.16.24.11 y 172.16.22.58
+        
+        buildConfigField("String", "BASE_URL", "\"http://172.16.22.58:8000/api/v1/\"")  // IP actual de red local
+        // buildConfigField("String", "BASE_URL", "\"http://172.16.24.11:8000/api/v1/\"")  // IP alternativa
+        // buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8000/api/v1/\"")  // Para emulador (si funciona)
+        // buildConfigField("String", "BASE_URL", "\"https://backtransportistas.tarjetasintegrales.mx:806/api/v1/\"")  // Producción
         
         // Configuración para auto-update desde GitHub
         buildConfigField("String", "GITHUB_REPO_OWNER", "\"Tarjetas-Integrales-Software\"")
